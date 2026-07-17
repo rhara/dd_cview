@@ -7,11 +7,13 @@
 #include "PythonBridge.h"
 
 #include <QByteArray>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
 
-#include <cstdlib>
 #include <stdexcept>
 
 namespace py = pybind11;
@@ -109,6 +111,21 @@ QVector<ResiduePair> parseResidues(const QJsonArray& arr) {
     return residues;
 }
 
+// Where dd_cview_backend.py actually lives at runtime. An *installed*
+// binary (see CMakeLists.txt's install() rules) has it in a sibling
+// "python/" directory next to the executable, which makes the whole
+// install directory relocatable -- copy it anywhere and it still finds its
+// own backend module. Falls back to the compile-time DD_CVIEW_PYTHON_DIR
+// (the source checkout's own python/ directory) for a binary run straight
+// out of the build directory, which has no such sibling.
+QString resolvePythonDir() {
+    QString installedDir = QDir(QCoreApplication::applicationDirPath()).filePath("python");
+    if (QFileInfo::exists(installedDir + "/dd_cview_backend.py")) {
+        return installedDir;
+    }
+    return QString::fromUtf8(DD_CVIEW_PYTHON_DIR);
+}
+
 }  // namespace
 
 struct PythonBridge::Impl {
@@ -126,8 +143,9 @@ PythonBridge::PythonBridge() : impl_(std::make_unique<Impl>()) {
     // PYTHONHOME at that env's prefix *before* Py_Initialize runs, so
     // `site.py` finds them the same way `python3` invoked from that env
     // would, regardless of what environment (if any) is active in the
-    // shell that launched dd_cview.
-    setenv("PYTHONHOME", DD_CVIEW_PYTHON_HOME, 1);
+    // shell that launched dd_cview. qputenv (not the POSIX-only `setenv`)
+    // so this builds on Windows too, where MSVC's CRT has no `setenv`.
+    qputenv("PYTHONHOME", QByteArray(DD_CVIEW_PYTHON_HOME));
 
     impl_->interpreter = std::make_unique<py::scoped_interpreter>();
 
@@ -151,7 +169,7 @@ PythonBridge::PythonBridge() : impl_(std::make_unique<Impl>()) {
         }
     }
     sys.attr("path") = cleanPath;
-    sys.attr("path").attr("insert")(0, std::string(DD_CVIEW_PYTHON_DIR));
+    sys.attr("path").attr("insert")(0, resolvePythonDir().toStdString());
 
     py::module_ backend = py::module_::import("dd_cview_backend");
     impl_->session = backend.attr("create_session")();

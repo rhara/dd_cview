@@ -43,6 +43,7 @@ private slots:
     void onAddPoses();
     void onOpenReference();
     void onOpenManifest();
+    void onSaveScreenshot();
     void onCenterOnLigand();
     void onZoomToHighlightedResidues();
     void onProteinSelectionChanged();

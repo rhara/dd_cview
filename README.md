@@ -72,19 +72,36 @@ type casters, no long-lived `py::object` handles anywhere outside
 
 ## Installation
 
-Requires Qt6 (`Core`, `Widgets`, `WebEngineWidgets`, `WebChannel`), CMake
-≥3.21, a C++20 compiler, and the same Python environment `dd_molview`
-itself runs in (`dd_viewer` + `dd_molview` installed, editable or not, plus
-their own dependencies -- RDKit, biopython, pandas, numpy -- and
-`pybind11`, which only needs to be importable from that environment, not
-separately installed as a system package).
+Every platform needs the same three things: CMake ≥3.21 with a C++20
+compiler, Qt6 (`Core`, `Widgets`, `WebEngineWidgets`, `WebChannel` -- the
+`WebEngineWidgets` part specifically means a full Qt6 + Chromium-based
+`qtwebengine` install is required, not just `qtbase`), and the same Python
+environment `dd_molview` itself runs in (`dd_viewer` + `dd_molview`
+installed, editable or not, plus their own dependencies -- RDKit,
+biopython, pandas, numpy -- and `pybind11`, which only needs to be
+importable from that environment, not separately installed as a system
+package). Only the first two are platform-specific to set up; the Python
+side is the same conda/miniforge env on every OS (see
+[`../dd_molview/README.md`](../dd_molview/README.md#installation) for the
+full from-scratch setup). **Only the macOS steps below have actually been
+build-verified in this project** (see
+[Verified behavior](#verified-behavior)) -- the Ubuntu/Windows steps follow
+the standard Qt6/CMake conventions for each platform but haven't been
+exercised on real Ubuntu/Windows machines from here.
+
+By default, the build embeds whichever Python `$CONDA_PREFIX/bin/python3`
+(`%CONDA_PREFIX%\python.exe` on Windows) points at when CMake is
+configured, falling back to a `dd` env under the platform's default
+miniforge location if no conda env is active -- override with
+`-DDD_CVIEW_PYTHON=/path/to/python3` (or `...\python.exe`) on any platform
+to point at a different environment (a differently-named conda env, a
+plain venv) that has `dd_viewer`/`dd_molview` installed.
+
+### macOS (Homebrew)
 
 ```bash
-# Qt6 + build tooling (macOS/Homebrew)
 brew install cmake qt ninja
 
-# the same conda env dd_molview/dd_viewer already run in (see
-# ../dd_molview/README.md for the full, from-scratch setup)
 conda activate dd
 pip install pybind11   # if not already present
 
@@ -92,21 +109,113 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
-By default, the build embeds whichever Python `$CONDA_PREFIX/bin/python3`
-points at when CMake is configured (falling back to `~/miniforge3/envs/dd`
-if no conda env is active) -- override with
-`-DDD_CVIEW_PYTHON=/path/to/python3` to point at a different environment
-(a differently-named conda env, a plain venv) that has `dd_viewer`/
-`dd_molview` installed.
+Homebrew's `qt` formula is keg-only (not linked onto the default search
+path); `CMakeLists.txt` already runs `brew --prefix qt` itself and appends
+it to `CMAKE_PREFIX_PATH`, so no manual `-DCMAKE_PREFIX_PATH` is needed
+here (unlike Windows below).
+
+### Ubuntu (22.04 / 24.04)
 
 ```bash
-cmake -S . -B build -G Ninja -DDD_CVIEW_PYTHON=/path/to/venv/bin/python3
+sudo apt update
+sudo apt install cmake ninja-build build-essential \
+    qt6-base-dev qt6-webengine-dev qt6-webengine-dev-tools
+
+conda activate dd
+pip install pybind11   # if not already present
+
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
 
-**Note**: like `dd_molview-desktop`, the 3D view is a `QWebEngineView`
-(Qt's `WebEngineWidgets` module), so Homebrew's full `qt` formula (which
-pulls in `qtwebengine`, a Chromium-based ~38-package dependency chain) is
-required -- the smaller `qtbase`-only install is not enough.
+`qt6-webengine-dev` pulls in the WebEngineWidgets runtime/dev headers (and
+their own large dependency chain -- same underlying Chromium cost as
+Homebrew's `qt` formula) as a transitive dependency; apt-installed Qt6
+lands on CMake's default search path already, so no `CMAKE_PREFIX_PATH`
+override is needed the way it is on Windows.
+
+### Windows (MSVC + Qt online installer)
+
+1. Install Visual Studio 2022 (or the standalone Build Tools) with the
+   **"Desktop development with C++"** workload -- this provides the MSVC
+   compiler and Windows SDK CMake needs.
+2. Install [CMake](https://cmake.org/download/) and
+   [Ninja](https://github.com/ninja-build/ninja/releases) (or use the ones
+   bundled with the Visual Studio Installer's optional components).
+3. Install Qt6 (6.5+) via the [Qt online
+   installer](https://www.qt.io/download-qt-installer), selecting the
+   **MSVC 2022 64-bit** kit *and* the **Qt WebEngine** module (unlike the
+   Homebrew/apt packages above, it is not pulled in automatically) -- this
+   installs to a path like `C:\Qt\6.7.2\msvc2022_64`.
+4. Install [Miniforge](https://github.com/conda-forge/miniforge) for
+   Windows and set up the same `dd` conda env `dd_molview` uses (see its
+   README), then `pip install pybind11` into it.
+5. Build from an **"x64 Native Tools Command Prompt for VS 2022"** (needed
+   so `cl.exe` is on `PATH`; a plain `cmd.exe`/PowerShell window won't have
+   it):
+
+   ```bat
+   cmake -S . -B build -G Ninja ^
+     -DCMAKE_BUILD_TYPE=Release ^
+     -DCMAKE_PREFIX_PATH=C:\Qt\6.7.2\msvc2022_64 ^
+     -DDD_CVIEW_PYTHON=%USERPROFILE%\miniforge3\envs\dd\python.exe
+   cmake --build build
+   ```
+
+   Unlike Homebrew/apt, the Qt online installer never registers itself on
+   CMake's search path -- `-DCMAKE_PREFIX_PATH` pointing at the exact
+   installed kit directory is required every time, not just as a fallback.
+
+## Installing the built binary
+
+`cmake --install` copies the built executable plus a sibling `python/`
+(the `dd_cview_backend.py` module) and `data/` (bundled sample structures)
+directory into one self-contained, relocatable directory under whatever
+`--prefix` you choose -- copy or move that whole directory anywhere
+afterward and `dd_cview` still finds its own backend module next to
+itself (see `PythonBridge.cpp`'s `resolvePythonDir()`). "Installing"
+`dd_cview` means picking a stable home for that directory and, optionally,
+putting the binary on your `PATH`.
+
+**This does not make the *embedded Python environment* itself portable**:
+the conda env/venv `-DDD_CVIEW_PYTHON` pointed at when the binary was
+*built* is baked in as its `PYTHONHOME` at compile time, and must still
+exist at that same path on whatever machine actually runs the installed
+binary. This is a personal/local build, not a distributable installer for
+other machines or other users' environments.
+
+```bash
+cmake --install build --prefix <any-writable-directory>
+```
+
+### macOS / Ubuntu
+
+```bash
+cmake --install build --prefix ~/apps/dd_cview
+ln -sf ~/apps/dd_cview/dd_cview ~/.local/bin/dd_cview   # or /usr/local/bin, if writable
+```
+
+(`~/.local/bin` is on `PATH` by default on most current Ubuntu/macOS
+shells; add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile
+if not.) Run it as `dd_cview` from anywhere afterward, or skip the symlink
+and just launch `~/apps/dd_cview/dd_cview` directly.
+
+### Windows
+
+```bat
+cmake --install build --prefix C:\Tools\dd_cview
+```
+
+Then either add `C:\Tools\dd_cview` to your user `PATH` (Settings > System
+> About > Advanced system settings > Environment Variables), or create a
+shortcut to `C:\Tools\dd_cview\dd_cview.exe` (Desktop or Start Menu) --
+there's no installer/uninstaller beyond that; it's a plain relocatable
+directory.
+
+**None of this is required for local development/testing** -- running
+`./build/dd_cview` (or `build\dd_cview.exe`) directly, straight out of the
+build directory, works identically; `cmake --install` only matters once
+you want a stable location outside the build directory.
 
 ## Usage
 
@@ -177,6 +286,14 @@ underlying `dd_viewer`/`dd_molview` calls, just through native `QTableView`/
 - **Every panel is its own dock** -- movable, floatable, closable
   independently, restored across sessions via `QSettings`
   (`saveGeometry`/`saveState`).
+- **Save 3D View Screenshot...** (File menu/toolbar): saves exactly what's
+  currently on screen in the 3D View dock -- receptor, pose, interaction
+  overlays, and whatever camera position it's framed at -- to a PNG file
+  you pick via a save dialog, using a plain `QWidget::grab()` of the
+  `QWebEngineView` (only meaningful with a real display; like every other
+  3D-view capture in this project, `grab()` can't see WebGL content under
+  `QT_QPA_PLATFORM=offscreen` -- see [Verified
+  behavior](#verified-behavior)).
 
 **Camera behavior** and **multi-residue selection** follow the exact same
 rules as `dd_molview-desktop` (see [its
@@ -239,6 +356,33 @@ level.
   `dd_molview-desktop`'s own single-threaded Qt event-loop model -- no
   background thread ever touches the interpreter, so there's no need for
   `py::gil_scoped_release`/`acquire` anywhere.
+- **Cross-platform environment plumbing avoids POSIX-only/layout
+  assumptions.** `PYTHONHOME` is set via `qputenv` (not the POSIX-only
+  `setenv`, which MSVC's CRT doesn't provide) so the same code builds on
+  Windows; `PYTHONHOME`'s *value* is queried directly from the target
+  interpreter via `sys.prefix` at CMake-configure time rather than derived
+  by counting directories up from `DD_CVIEW_PYTHON`, since how many levels
+  that takes differs by both platform *and* env flavor (conda-on-Windows:
+  the interpreter already sits in the env root; conda-on-POSIX and a POSIX
+  venv's `bin/`: one level up; a Windows venv's `Scripts/`: also one level
+  up) -- `sys.prefix` sidesteps guessing which convention applies. On
+  macOS/Linux, `dd_cview`'s CMake target also gets an explicit
+  `INSTALL_RPATH` pointing at that same env's `lib/` directory -- without
+  it, an installed (`cmake --install`) binary dies at startup with a
+  dynamic-linker error (`Library not loaded: @rpath/libpython3.12.dylib` /
+  `error while loading shared libraries: libpython3.so...`) before even
+  reaching `main()`, since CMake only adds this automatically for the
+  *build-tree* binary, not an installed one.
+- **An installed binary finds its own backend module relative to itself,
+  not the source checkout.** `PythonBridge.cpp`'s `resolvePythonDir()`
+  first looks for `python/dd_cview_backend.py` next to the running
+  executable (`QCoreApplication::applicationDirPath()`) -- the layout
+  `cmake --install` produces (see [Installing the built
+  binary](#installing-the-built-binary)) -- and only falls back to the
+  compile-time source-tree path (`DD_CVIEW_PYTHON_DIR`) if that's not
+  there, which is what makes a `cmake --install`'d directory genuinely
+  relocatable (copy/move it anywhere) instead of permanently depending on
+  the exact build directory it came from.
 
 ## Sample data (`data/`)
 
@@ -271,9 +415,26 @@ shared by `dd_viewer`/`dd_molview`/`dd_cview` (the exact scenario the
 `dd_molview-desktop`, real `QWebEngineView` WebGL rendering isn't
 observable under `QT_QPA_PLATFORM=offscreen` -- the 3D view's actual
 on-screen rendering and camera-preservation behavior needs a real display
-to confirm visually; the interaction/camera *logic* itself is exercised
-(unmodified) by `dd_viewer`/`dd_molview`'s own test suites, which this
-project doesn't duplicate.
+to confirm visually (this also means "Save 3D View Screenshot..." itself
+hasn't been visually confirmed to capture real rendered content, only that
+it doesn't crash and writes *a* PNG); the interaction/camera *logic*
+itself is exercised (unmodified) by `dd_viewer`/`dd_molview`'s own test
+suites, which this project doesn't duplicate.
+
+`cmake --install`'s relocatability was verified directly: installing to a
+throwaway prefix (`cmake --install build --prefix /tmp/...`) and running
+the installed binary from a different working directory than either the
+build tree or the install prefix, with `--receptor`/`--poses` pointing at
+the installed copy's own `data/` directory, loads correctly -- confirming
+both `resolvePythonDir()`'s relative-to-executable lookup and the
+`INSTALL_RPATH` fix (without which the installed binary fails immediately
+with a dynamic-linker error before reaching `main()`, on macOS at least;
+not separately confirmed on Linux, though the same `cmake --install`
+rpath-stripping default applies there too). Only the macOS build itself,
+and this macOS install flow, were actually exercised in this project --
+the Ubuntu/Windows build and install instructions above are
+standard-convention but unverified here (see
+[Installation](#installation)).
 
 ## License
 

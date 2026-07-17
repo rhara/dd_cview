@@ -173,6 +173,12 @@ void MainWindow::buildMenuAndToolbar() {
     connect(openManifestAction, &QAction::triggered, this, &MainWindow::onOpenManifest);
     fileToolbar->addAction(openManifestAction);
 
+    fileMenu->addSeparator();
+    QAction* saveScreenshotAction = fileMenu->addAction("Save 3D View Screenshot...");
+    connect(saveScreenshotAction, &QAction::triggered, this, &MainWindow::onSaveScreenshot);
+    fileToolbar->addSeparator();
+    fileToolbar->addAction(saveScreenshotAction);
+
     // "Center on Ligand" and "Zoom to Highlighted Residues" live only in
     // the Settings dock now (buildWidgets/DisplaySettingsPanel) -- both are
     // camera-only actions that make more sense grouped with the rest of
@@ -281,6 +287,26 @@ void MainWindow::onOpenManifest() {
 
 void MainWindow::reload() {
     loadFromPaths(receptorPaths_, posesPaths_, referencePath_, manifestPath_);
+}
+
+void MainWindow::onSaveScreenshot() {
+    // QWebEngineView is a plain QWidget as far as grab() is concerned, so
+    // this captures exactly what's currently on screen -- receptor, pose,
+    // interaction overlays, and whatever camera position the user has it
+    // framed at, not a freshly re-rendered/re-centered view. (Only
+    // observable with a real display, same caveat as everywhere else in
+    // this project that touches the 3D view: QWebEngineView's WebGL
+    // content isn't captured by grab() under QT_QPA_PLATFORM=offscreen.)
+    QString path = QFileDialog::getSaveFileName(this, "Save 3D View Screenshot", QString(), "PNG images (*.png)");
+    if (path.isEmpty()) {
+        return;
+    }
+    if (!path.endsWith(".png", Qt::CaseInsensitive)) {
+        path += ".png";
+    }
+    if (!view3dWidget_->grab().save(path, "PNG")) {
+        QMessageBox::warning(this, "Save failed", QString("Could not save screenshot to:\n%1").arg(path));
+    }
 }
 
 void MainWindow::loadFromPaths(const QStringList& receptorPaths, const QStringList& posesPaths,
