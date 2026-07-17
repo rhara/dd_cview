@@ -19,7 +19,6 @@ public:
     explicit DisplaySettingsPanel(QWidget* parent = nullptr);
 
     DisplaySettings currentSettings() const;
-    bool showContactResidues() const;
     double contactCutoff() const;
 
     // Enables/disables "Show reference ligand" (and unchecks it when
@@ -29,6 +28,14 @@ public:
 signals:
     void settingsChanged();
     void centerOnLigandRequested();
+    // "Zoom to Highlighted Residues": re-fit the camera to whatever
+    // residues are currently rendered yellow (the interaction-detected
+    // set -- see DisplaySettings::showInteractingResidues), the same way
+    // centerOnLigandRequested re-fits it to the ligand. MainWindow owns
+    // the actual residue list (it comes back from PythonBridge::buildView's
+    // ViewResult, not from anything this panel tracks), so this signal
+    // carries no payload -- MainWindow reads its own last-known set.
+    void zoomToHighlightedResiduesRequested();
 
 private:
     void buildLayout();
@@ -36,6 +43,7 @@ private:
     void updateCutoffLabel(int sliderValue);
 
     QPushButton* centerOnLigandButton_;
+    QPushButton* zoomToHighlightedButton_;
     QComboBox* receptorStyleCombo_;
     QCheckBox* colorBySSCheck_;
     QCheckBox* onlyNearLigandCheck_;
@@ -46,7 +54,7 @@ private:
     QCheckBox* showPiStackingCheck_;
     QCheckBox* showPiHalogenCheck_;
     QCheckBox* showSulfurHalogenCheck_;
-    QCheckBox* showContactResiduesCheck_;
+    QCheckBox* showInteractingResiduesCheck_;
     QSlider* contactCutoffSlider_;
     QLabel* contactCutoffLabel_;
     QCheckBox* showReferenceCheck_;

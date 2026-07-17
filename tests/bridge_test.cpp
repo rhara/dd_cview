@@ -62,6 +62,15 @@ int main(int argc, char** argv) {
     CHECK(!view.html.isEmpty());
     CHECK(!view.viewerVar.isEmpty());
     CHECK(view.hbonds > 0);
+    // highlightResidues is the union of residues behind every *enabled*
+    // interaction type (showInteractingResidues defaults to true) -- with
+    // at least one hbond found above, this must be non-empty too.
+    CHECK(!view.highlightResidues.isEmpty());
+
+    DisplaySettings noHighlight = settings;
+    noHighlight.showInteractingResidues = false;
+    ViewResult viewNoHighlight = bridge.buildView(noHighlight, {}, QJsonArray());
+    CHECK(viewNoHighlight.highlightResidues.isEmpty());
 
     DetailInfo info = bridge.detailInfo();
     CHECK(info.hasPose);

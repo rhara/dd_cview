@@ -44,6 +44,7 @@ private slots:
     void onOpenReference();
     void onOpenManifest();
     void onCenterOnLigand();
+    void onZoomToHighlightedResidues();
     void onProteinSelectionChanged();
     void onLigandSelectionChanged();
     void onContactSelectionChanged();
@@ -82,6 +83,12 @@ private:
     // residues highlight), matching the Python original's `Optional[list]`
     // collapsing an empty pick back to `None`.
     QVector<ResiduePair> selectedResidues_;
+
+    // The exact (chain, resnum) set last rendered yellow (from
+    // PythonBridge::buildView's ViewResult::highlightResidues) -- kept so
+    // "Zoom to Highlighted Residues" can re-fit the camera to it without
+    // an extra round trip.
+    QVector<ResiduePair> currentHighlightResidues_;
 
     QTableView* proteinTable_ = nullptr;
     QTableView* ligandTable_ = nullptr;

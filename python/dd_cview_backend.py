@@ -190,10 +190,13 @@ class Session:
     # ------------------------------------------------------------------
     def build_view_html(self, settings_json: str, selected_residues_json: str, saved_camera_json: str) -> str:
         """Returns a JSON object: `{html, viewer_var, hbonds, hydrophobic,
-        salt_bridges, electrostatic, pi_stacking, pi_halogen, sulfur_halogen}`
-        (`html`/`viewer_var` are `null` when nothing is loaded yet). The
-        interaction counts ride along here (rather than a separate call) so
-        the C++ side's "Interaction summary" label and the 3D view always
+        salt_bridges, electrostatic, pi_stacking, pi_halogen, sulfur_halogen,
+        highlight_residues}` (`html`/`viewer_var` are `null` when nothing is
+        loaded yet). The interaction counts and `highlight_residues` (the
+        exact (chain, resnum) pairs rendered yellow -- see
+        `show_interacting_residues` below) ride along here (rather than a
+        separate call) so the C++ side's "Interaction summary" label, the
+        rendered scene, and the "Zoom to Highlighted Residues" button all
         describe the exact same computed frame -- a second, separate call
         could race a settings change in between.
         """
@@ -203,7 +206,7 @@ class Session:
             return json.dumps({
                 "html": None, "viewer_var": None, "hbonds": 0, "hydrophobic": 0,
                 "salt_bridges": 0, "electrostatic": 0, "pi_stacking": 0,
-                "pi_halogen": 0, "sulfur_halogen": 0,
+                "pi_halogen": 0, "sulfur_halogen": 0, "highlight_residues": [],
             })
 
         settings = json.loads(settings_json)
@@ -214,9 +217,6 @@ class Session:
         highlight_residues = None
         hbonds = hydrophobic = salt_bridges = pi_stacking = electrostatic = pi_halogen = sulfur_halogen = []
         if receptor is not None and pose is not None:
-            contact_df = dv.find_contact_residues(receptor, pose.mol, cutoff=settings["contact_cutoff"])
-            if settings["show_contact_residues"]:
-                highlight_residues = list(zip(contact_df["chain"], contact_df["resnum"]))
             if settings["show_hbonds"]:
                 hbonds = dv.find_hydrogen_bonds(receptor, pose.mol)
             if settings["show_hydrophobic"]:
@@ -231,6 +231,21 @@ class Session:
                 pi_halogen = dv.find_pi_halogen_bonds(receptor, pose.mol)
             if settings["show_sulfur_halogen"]:
                 sulfur_halogen = dv.find_sulfur_halogen_bonds(receptor, pose.mol)
+            if settings["show_interacting_residues"]:
+                # Every residue behind at least one *currently enabled*
+                # interaction type -- not merely every residue within
+                # `contact_cutoff` (that broader, purely distance-based set
+                # stays available, unaffected by this flag, via the
+                # separate contact_table_json/find_contact_residues call).
+                # Contact/RingContact both carry chain/resnum identifying
+                # the receptor residue, uniformly across every interaction
+                # type.
+                residues = {
+                    (contact.chain, contact.resnum)
+                    for contact in (*hbonds, *hydrophobic, *salt_bridges, *pi_stacking,
+                                     *electrostatic, *pi_halogen, *sulfur_halogen)
+                }
+                highlight_residues = sorted(residues)
 
         view = dv.build_view(
             receptor=receptor, pose_mol=pose.mol if pose is not None else None,
@@ -253,6 +268,7 @@ class Session:
             "salt_bridges": len(salt_bridges), "electrostatic": len(electrostatic),
             "pi_stacking": len(pi_stacking), "pi_halogen": len(pi_halogen),
             "sulfur_halogen": len(sulfur_halogen),
+            "highlight_residues": [list(pair) for pair in (highlight_residues or [])],
         })
 
     # ------------------------------------------------------------------

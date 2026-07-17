@@ -36,7 +36,14 @@ struct DisplaySettings {
     bool showPiStacking = true;
     bool showPiHalogen = true;
     bool showSulfurHalogen = true;
-    bool showContactResidues = true;
+    // Highlight (yellow, in both the 3D view and the sequence panel) every
+    // residue that has at least one *actual detected interaction* with the
+    // ligand -- the union of whichever of the interaction lists above are
+    // currently enabled -- not merely every residue within `contactCutoff`
+    // of the ligand (that broader, purely-distance-based set is still
+    // shown, unaffected by this flag, in the separate Contact residues
+    // table).
+    bool showInteractingResidues = true;
     double contactCutoff = 3.0;
     bool showReference = false;
 };
@@ -70,6 +77,12 @@ struct ViewResult {
     int piStacking = 0;
     int piHalogen = 0;
     int sulfurHalogen = 0;
+    // The exact (chain, resnum) set rendered yellow in this frame (the
+    // union of whichever enabled interaction lists' residues, computed
+    // server-side -- see DisplaySettings::showInteractingResidues) --
+    // handed back so the C++ side can reuse the identical set for the
+    // "Zoom to Highlighted Residues" button without recomputing it.
+    QVector<ResiduePair> highlightResidues;
 };
 
 struct DetailInfo {

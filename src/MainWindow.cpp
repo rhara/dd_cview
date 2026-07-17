@@ -32,19 +32,6 @@ std::vector<ResiduePair> toStdVector(const QVector<ResiduePair>& v) {
     return std::vector<ResiduePair>(v.begin(), v.end());
 }
 
-QVector<ResiduePair> tableToResidues(const TableData& table) {
-    QVector<ResiduePair> residues;
-    int chainCol = table.columns.indexOf("chain");
-    int resnumCol = table.columns.indexOf("resnum");
-    if (chainCol < 0 || resnumCol < 0) {
-        return residues;
-    }
-    for (const auto& row : table.rawRows) {
-        residues.append({row[chainCol].toString(), row[resnumCol].toInt()});
-    }
-    return residues;
-}
-
 }  // namespace
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -186,20 +173,11 @@ void MainWindow::buildMenuAndToolbar() {
     connect(openManifestAction, &QAction::triggered, this, &MainWindow::onOpenManifest);
     fileToolbar->addAction(openManifestAction);
 
+    // "Center on Ligand" and "Zoom to Highlighted Residues" live only in
+    // the Settings dock now (buildWidgets/DisplaySettingsPanel) -- both are
+    // camera-only actions that make more sense grouped with the rest of
+    // the display settings than duplicated up in a top-level menu/toolbar.
     QMenu* viewMenu = menuBar()->addMenu("&View");
-    auto* viewToolbar = new QToolBar("View");
-    viewToolbar->setObjectName("view_toolbar");  // required for saveState() to persist/restore it silently
-    addToolBar(viewToolbar);
-
-    // Same action as the settings dock's "Center on Ligand" button -- the
-    // only way to explicitly re-fit the camera to the current ligand (or
-    // receptor, if there's no ligand) on demand. Every other refresh
-    // deliberately preserves whatever camera position the user left it at.
-    QAction* centerAction = viewMenu->addAction("Center on Ligand");
-    connect(centerAction, &QAction::triggered, this, &MainWindow::onCenterOnLigand);
-    viewToolbar->addAction(centerAction);
-
-    viewMenu->addSeparator();
     // Each dock's own built-in toggleViewAction() -- a checkable QAction
     // that tracks the dock's shown/hidden state in both directions -- lets
     // any panel closed via its dock be reopened from here.
@@ -217,6 +195,8 @@ void MainWindow::wireSignals() {
             &MainWindow::onContactSelectionChanged);
     connect(settingsPanel_, &DisplaySettingsPanel::settingsChanged, this, [this]() { refreshView(false); });
     connect(settingsPanel_, &DisplaySettingsPanel::centerOnLigandRequested, this, &MainWindow::onCenterOnLigand);
+    connect(settingsPanel_, &DisplaySettingsPanel::zoomToHighlightedResiduesRequested, this,
+            &MainWindow::onZoomToHighlightedResidues);
     connect(sequencePanel_, &QTextBrowser::anchorClicked, this, &MainWindow::onSequenceAnchorClicked);
     for (auto* dock : docks_) {
         connect(dock, &QDockWidget::visibilityChanged, this, &MainWindow::nudgeView3DRepaint);
@@ -420,6 +400,13 @@ void MainWindow::onCenterOnLigand() {
     refreshView(true);
 }
 
+void MainWindow::onZoomToHighlightedResidues() {
+    // A direct, live camera move against the *currently loaded* scene
+    // (same as a chain-header click) -- nothing about the scene's content
+    // changes, so there's no need to go through refreshView.
+    viewer3d_->zoomToResidues(toStdVector(currentHighlightResidues_));
+}
+
 void MainWindow::refreshLigandTable() {
     // Rebuilds against the *active* receptor only (dashboard.py's
     // O(n_ligands), never O(n_receptors * n_ligands), contract); the
@@ -449,20 +436,23 @@ void MainWindow::refreshLigandTable() {
 // Central recompute-and-redraw
 // ------------------------------------------------------------------
 void MainWindow::refreshView(bool recenter) {
+    // The Contact residues table is purely distance-based (find_contact_
+    // residues at the slider's cutoff) and independent of which residues
+    // get highlighted yellow below -- see DisplaySettings::
+    // showInteractingResidues's comment for why those are no longer the
+    // same set.
     double cutoff = settingsPanel_->contactCutoff();
     TableData contacts = bridge_->contactTable(cutoff);
     contactModel_->setTable(contacts);
 
-    QVector<ResiduePair> highlightResidues;
-    if (settingsPanel_->showContactResidues()) {
-        highlightResidues = tableToResidues(contacts);
-    }
-
     // The 3D view's own update may be deferred behind an async
     // page().runJavaScript() round-trip (reading back the live camera
-    // before replacing the page) -- see Viewer3D::requestCamera. Nothing
-    // else below depends on that round-trip, so it updates synchronously
-    // regardless of which branch below runs.
+    // before replacing the page) -- see Viewer3D::requestCamera. The
+    // sequence panel depends on buildView's *authoritative*
+    // highlightResidues (computed server-side from whichever interaction
+    // types are currently enabled -- see build_view_html), so it updates
+    // from inside this same callback rather than independently, in both
+    // the immediate and deferred branches below.
     auto render = [this](QJsonArray savedCamera) {
         DisplaySettings settings = settingsPanel_->currentSettings();
         ViewResult result = bridge_->buildView(settings, toStdVector(selectedResidues_), savedCamera);
@@ -471,20 +461,21 @@ void MainWindow::refreshView(bool recenter) {
         } else {
             viewer3d_->setPlaceholder("Open a receptor PDB (File menu) to get started.");
         }
+        currentHighlightResidues_ = result.highlightResidues;
         updateDetailLabels(result);
+
+        if (bridge_->receptorCount() > 0) {
+            QString html = bridge_->sequenceHtml(toStdVector(currentHighlightResidues_), toStdVector(selectedResidues_));
+            sequencePanel_->setHtml(html);
+        } else {
+            sequencePanel_->setHtml(QString());
+        }
     };
 
     if (recenter || !viewer3d_->hasContent()) {
         render(QJsonArray());
     } else {
         viewer3d_->requestCamera(render);
-    }
-
-    if (bridge_->receptorCount() > 0) {
-        QString html = bridge_->sequenceHtml(toStdVector(highlightResidues), toStdVector(selectedResidues_));
-        sequencePanel_->setHtml(html);
-    } else {
-        sequencePanel_->setHtml(QString());
     }
 }
 

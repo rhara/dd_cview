@@ -10,6 +10,9 @@
 #include <QString>
 
 #include <functional>
+#include <vector>
+
+#include "PythonBridge.h"  // for ResiduePair
 
 class QWebEngineView;
 
@@ -35,6 +38,14 @@ public:
     // residue click, so it's called directly rather than going through a
     // full MainWindow::refreshView.
     void zoomToChain(const QString& chain);
+
+    // Re-fits the camera to the union of `residues` (a live zoomTo()+
+    // render() call, same as zoomToChain) -- built via a 3Dmol.js
+    // `predicate` selector (matching any (chain, resnum) pair in the list)
+    // since a plain AtomSelectionSpec can't OR together several distinct
+    // chain+resi combinations in one call. A no-op if there's no content
+    // loaded or `residues` is empty.
+    void zoomToResidues(const std::vector<ResiduePair>& residues);
 
     // Reads the live scene's current camera position asynchronously (a
     // page().runJavaScript() round-trip); `callback` receives an empty

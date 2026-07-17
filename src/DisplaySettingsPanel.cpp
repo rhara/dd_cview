@@ -23,6 +23,12 @@ DisplaySettingsPanel::DisplaySettingsPanel(QWidget* parent) : QWidget(parent) {
         "picking a different protein/ligand row or changing a display setting never "
         "moves it on its own.");
 
+    zoomToHighlightedButton_ = new QPushButton("Zoom to Highlighted Residues");
+    zoomToHighlightedButton_->setToolTip(
+        "Re-fit the 3D camera to whatever residues are currently highlighted yellow "
+        "(the residues with a detected interaction -- see \"Highlight interacting "
+        "residues\" below). Does nothing if nothing is currently highlighted.");
+
     receptorStyleCombo_ = new QComboBox();
     receptorStyleCombo_->addItems(kReceptorStyles);
 
@@ -40,8 +46,13 @@ DisplaySettingsPanel::DisplaySettingsPanel(QWidget* parent) : QWidget(parent) {
     showPiHalogenCheck_->setChecked(true);
     showSulfurHalogenCheck_ = new QCheckBox("Show sulfur-halogen bonds");
     showSulfurHalogenCheck_->setChecked(true);
-    showContactResiduesCheck_ = new QCheckBox("Highlight contact residues");
-    showContactResiduesCheck_->setChecked(true);
+    showInteractingResiduesCheck_ = new QCheckBox("Highlight interacting residues");
+    showInteractingResiduesCheck_->setToolTip(
+        "Highlight (yellow) every residue with at least one detected interaction of a "
+        "currently-enabled type above -- not merely every residue within the Contact "
+        "residue cutoff below (that broader, distance-only set still populates the "
+        "Contact residues table regardless of this checkbox).");
+    showInteractingResiduesCheck_->setChecked(true);
     onlyNearLigandCheck_ = new QCheckBox("Show ribbon/residues near ligand only");
 
     // 2.0-10.0 Å, step 0.5 -> integer ticks 0..16 mapped to 2.0 + 0.5*tick
@@ -71,7 +82,7 @@ void DisplaySettingsPanel::buildLayout() {
     form->addRow(showPiStackingCheck_);
     form->addRow(showPiHalogenCheck_);
     form->addRow(showSulfurHalogenCheck_);
-    form->addRow(showContactResiduesCheck_);
+    form->addRow(showInteractingResiduesCheck_);
 
     auto* cutoffRow = new QHBoxLayout();
     cutoffRow->addWidget(contactCutoffSlider_);
@@ -81,8 +92,12 @@ void DisplaySettingsPanel::buildLayout() {
     form->addRow(showReferenceCheck_);
     group->setLayout(form);
 
+    auto* buttonRow = new QHBoxLayout();
+    buttonRow->addWidget(centerOnLigandButton_);
+    buttonRow->addWidget(zoomToHighlightedButton_);
+
     auto* layout = new QVBoxLayout();
-    layout->addWidget(centerOnLigandButton_);
+    layout->addLayout(buttonRow);
     layout->addWidget(group);
     layout->addStretch(1);
     setLayout(layout);
@@ -90,6 +105,8 @@ void DisplaySettingsPanel::buildLayout() {
 
 void DisplaySettingsPanel::wireSignals() {
     connect(centerOnLigandButton_, &QPushButton::clicked, this, &DisplaySettingsPanel::centerOnLigandRequested);
+    connect(zoomToHighlightedButton_, &QPushButton::clicked, this,
+            &DisplaySettingsPanel::zoomToHighlightedResiduesRequested);
     connect(receptorStyleCombo_, &QComboBox::currentIndexChanged, this, &DisplaySettingsPanel::settingsChanged);
     connect(colorBySSCheck_, &QCheckBox::checkStateChanged, this, &DisplaySettingsPanel::settingsChanged);
     connect(onlyNearLigandCheck_, &QCheckBox::checkStateChanged, this, &DisplaySettingsPanel::settingsChanged);
@@ -100,7 +117,7 @@ void DisplaySettingsPanel::wireSignals() {
     connect(showPiStackingCheck_, &QCheckBox::checkStateChanged, this, &DisplaySettingsPanel::settingsChanged);
     connect(showPiHalogenCheck_, &QCheckBox::checkStateChanged, this, &DisplaySettingsPanel::settingsChanged);
     connect(showSulfurHalogenCheck_, &QCheckBox::checkStateChanged, this, &DisplaySettingsPanel::settingsChanged);
-    connect(showContactResiduesCheck_, &QCheckBox::checkStateChanged, this, &DisplaySettingsPanel::settingsChanged);
+    connect(showInteractingResiduesCheck_, &QCheckBox::checkStateChanged, this, &DisplaySettingsPanel::settingsChanged);
     connect(showReferenceCheck_, &QCheckBox::checkStateChanged, this, &DisplaySettingsPanel::settingsChanged);
     connect(contactCutoffSlider_, &QSlider::valueChanged, this, [this](int value) {
         updateCutoffLabel(value);
@@ -116,10 +133,6 @@ double DisplaySettingsPanel::contactCutoff() const {
     return 2.0 + 0.5 * contactCutoffSlider_->value();
 }
 
-bool DisplaySettingsPanel::showContactResidues() const {
-    return showContactResiduesCheck_->isChecked();
-}
-
 DisplaySettings DisplaySettingsPanel::currentSettings() const {
     DisplaySettings s;
     s.receptorStyle = receptorStyleCombo_->currentText();
@@ -132,7 +145,7 @@ DisplaySettings DisplaySettingsPanel::currentSettings() const {
     s.showPiStacking = showPiStackingCheck_->isChecked();
     s.showPiHalogen = showPiHalogenCheck_->isChecked();
     s.showSulfurHalogen = showSulfurHalogenCheck_->isChecked();
-    s.showContactResidues = showContactResiduesCheck_->isChecked();
+    s.showInteractingResidues = showInteractingResiduesCheck_->isChecked();
     s.contactCutoff = contactCutoff();
     s.showReference = showReferenceCheck_->isChecked();
     return s;

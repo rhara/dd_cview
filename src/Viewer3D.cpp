@@ -44,6 +44,34 @@ void Viewer3D::zoomToChain(const QString& chain) {
     view_->page()->runJavaScript(js);
 }
 
+void Viewer3D::zoomToResidues(const std::vector<ResiduePair>& residues) {
+    if (viewerVar_.isEmpty() || residues.empty()) {
+        return;
+    }
+    // A plain AtomSelectionSpec ANDs its keys together (`{chain: "A", resi:
+    // [...]}` means "chain A AND (any of these resi)"), so it can't express
+    // "chain A resi 12 OR chain B resi 45" in one call -- 3Dmol.js's
+    // `predicate` selector (a user-supplied JS function run per atom) can.
+    QJsonArray pairs;
+    for (const auto& [chain, resnum] : residues) {
+        QJsonArray pair;
+        pair.append(chain);
+        pair.append(resnum);
+        pairs.append(pair);
+    }
+    QString pairsJson = QString::fromUtf8(QJsonDocument(pairs).toJson(QJsonDocument::Compact));
+    QString js = QString(
+                     "if (typeof %1 !== 'undefined' && %1) { "
+                     "var ddCviewSel = %2; "
+                     "%1.zoomTo({predicate: function(atom) { "
+                     "for (var i = 0; i < ddCviewSel.length; i++) { "
+                     "if (atom.chain === ddCviewSel[i][0] && atom.resi === ddCviewSel[i][1]) return true; } "
+                     "return false; }}); "
+                     "%1.render(); }")
+                     .arg(viewerVar_, pairsJson);
+    view_->page()->runJavaScript(js);
+}
+
 void Viewer3D::requestCamera(std::function<void(QJsonArray)> callback) const {
     if (viewerVar_.isEmpty()) {
         callback(QJsonArray());

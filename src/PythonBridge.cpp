@@ -69,7 +69,7 @@ std::string settingsToJson(const DisplaySettings& s) {
     obj["show_pi_stacking"] = s.showPiStacking;
     obj["show_pi_halogen"] = s.showPiHalogen;
     obj["show_sulfur_halogen"] = s.showSulfurHalogen;
-    obj["show_contact_residues"] = s.showContactResidues;
+    obj["show_interacting_residues"] = s.showInteractingResidues;
     obj["contact_cutoff"] = s.contactCutoff;
     obj["show_reference"] = s.showReference;
     return QJsonDocument(obj).toJson(QJsonDocument::Compact).toStdString();
@@ -96,6 +96,17 @@ TableData parseTable(const std::string& text) {
         data.rawRows << rowVal.toArray();
     }
     return data;
+}
+
+QVector<ResiduePair> parseResidues(const QJsonArray& arr) {
+    QVector<ResiduePair> residues;
+    for (const auto& v : arr) {
+        QJsonArray pair = v.toArray();
+        if (pair.size() == 2) {
+            residues.append({pair[0].toString(), pair[1].toInt()});
+        }
+    }
+    return residues;
 }
 
 }  // namespace
@@ -254,6 +265,7 @@ ViewResult PythonBridge::buildView(const DisplaySettings& settings, const std::v
     result.piStacking = obj["pi_stacking"].toInt();
     result.piHalogen = obj["pi_halogen"].toInt();
     result.sulfurHalogen = obj["sulfur_halogen"].toInt();
+    result.highlightResidues = parseResidues(obj["highlight_residues"].toArray());
     return result;
 }
 

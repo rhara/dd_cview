@@ -158,13 +158,22 @@ underlying `dd_viewer`/`dd_molview` calls, just through native `QTableView`/
   camera-position persistence across updates -- `Viewer3D` re-applies the
   last captured camera view to each freshly reloaded scene via a
   `page()->runJavaScript()` round-trip, the same technique
-  `dd_molview-desktop` uses.
+  `dd_molview-desktop` uses. **Highlight interacting residues** (yellow, on
+  by default) marks every residue behind at least one currently-enabled
+  interaction type above -- not merely every residue within the Contact
+  residue cutoff below; that broader, purely distance-based set is a
+  separate, independent concept (see the Contact-residue table below).
 - **Sequence panel**: fixed 50-residues-per-line resnum grid with a
   line-start ruler, yellow/magenta two-tier highlighting matching the 3D
-  view, clickable residues (multi-select with Ctrl/Cmd-click) and
-  clickable "Chain X" headers (re-fits the camera to that chain).
-- **Contact-residue table** (collapsed by default): selecting rows
-  highlights the same residues in both the 3D view and the sequence panel.
+  view (the same interaction-based yellow set described above), clickable
+  residues (multi-select with Ctrl/Cmd-click) and clickable "Chain X"
+  headers (re-fits the camera to that chain).
+- **Contact-residue table** (collapsed by default): every residue within
+  the Contact residue cutoff slider's distance of the ligand, independent
+  of the yellow highlight above -- selecting rows highlights those
+  specific residues magenta in both the 3D view and the sequence panel
+  (the usual manual-pick mechanism), regardless of whether they also
+  happen to have a detected interaction.
 - **Every panel is its own dock** -- movable, floatable, closable
   independently, restored across sessions via `QSettings`
   (`saveGeometry`/`saveState`).
@@ -173,8 +182,21 @@ underlying `dd_viewer`/`dd_molview` calls, just through native `QTableView`/
 rules as `dd_molview-desktop` (see [its
 README](../dd_molview/README.md#usage) for the full writeup) -- switching
 the active protein/ligand row or toggling a display setting never moves
-the camera; only dragging/zooming it yourself or an explicit "Center on
-Ligand" does.
+the camera; only dragging/zooming it yourself, "Center on Ligand", or
+"Zoom to Highlighted Residues" does.
+
+**`dd_cview`-only addition** (not present in `dd_molview-desktop`): the
+Settings dock has a second camera button, **Zoom to Highlighted
+Residues**, next to "Center on Ligand" -- re-fits the camera to whatever
+residues are currently highlighted yellow (a live `zoomTo({predicate:
+...})` + `render()` call against the loaded scene, the same
+direct-camera-move technique as a sequence-panel chain-header click; a
+no-op if nothing is currently highlighted). Both camera buttons live only
+in the Settings dock now -- there is no longer a top-level View menu/
+toolbar "Center on Ligand" entry, since grouping both camera actions with
+the rest of the display settings (which is what decides what's actually
+highlighted) reads more clearly than duplicating one of them at the top
+level.
 
 ## Module structure (`src/`)
 
