@@ -209,6 +209,24 @@ exist at that same path on whatever machine actually runs the installed
 binary. This is a personal/local build, not a distributable installer for
 other machines or other users' environments.
 
+**Running the installed binary needs *no* `conda activate` step, though**
+-- `PYTHONHOME` (compile-time, from `DD_CVIEW_PYTHON_HOME`) and the
+dynamic linker `RUNPATH` to that same env's `lib/` (`BUILD_RPATH`/
+`INSTALL_RPATH` in `CMakeLists.txt`, see [Design notes](#design-notes))
+are both baked into the binary itself, not read from the shell's
+environment at launch time. Verified directly: `readelf -d
+build/dd_cview | grep RUNPATH` shows the env's `lib/` path baked in, and
+running the installed binary under `env -i` (every environment variable
+scrubbed, including `PATH`/`CONDA_PREFIX` -- no active conda env, no
+`conda` even on `PATH`) still starts up and loads sample data correctly.
+What genuinely *is* required is only that the conda env's files
+themselves still physically exist, unmoved, at the path they were at when
+`dd_cview` was built (`/opt/miniforge3/envs/dd_cview` in this project's
+own build, for instance) -- deleting, renaming, or relocating that env
+breaks the installed binary (a dynamic-linker error for
+`libpython3.*.so`/`.dylib` before it even reaches `main()`), regardless of
+where `dd_cview` itself was installed to.
+
 ```bash
 cmake --install build --prefix <any-writable-directory>
 ```
