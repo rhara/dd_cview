@@ -1,10 +1,10 @@
-"""Embedded-Python backend for dd_cview's native C++/Qt GUI.
+"""Embedded-Python backend for dd_molview's native C++/Qt GUI.
 
-dd_cview reimplements the GUI shell (windows, docks, tables, the sequence
+dd_molview reimplements the GUI shell (windows, docks, tables, the sequence
 widget, the 3D-view container, event wiring) that the retired PySide6
 `dd_molview-desktop` app used to provide, in native C++/Qt, while reusing
 `dd_viewer` (PDB/SDF parsing, contact/interaction detection, scoring, RMSD,
-scene-HTML generation) and `dd_cview_core` (multi-receptor/ligand
+scene-HTML generation) and `dd_molview_core` (multi-receptor/ligand
 collections, sequence extraction/HTML rendering, dashboard tables --
 absorbed from `dd_molview`'s core logic, unmodified, when `dd_molview` was
 retired in favor of this project) unmodified, through an embedded Python
@@ -31,7 +31,7 @@ import math
 from typing import Optional
 
 import dd_viewer as dv
-import dd_cview_core as dm
+import dd_molview_core as dm
 
 
 def _json_safe(value):
@@ -48,7 +48,7 @@ def _json_safe(value):
 def _df_to_table_json(df) -> str:
     """Same string-cast convention as the Python desktop app's
     `DataFrameTableModel.data()` (`"" if pd.isna(value) else str(value)`),
-    so a `dd_cview` table renders identically to its `dd_molview` counterpart
+    so a `dd_molview` table renders identically to its `dd_molview` counterpart
     -- plus the raw (JSON-safe, non-stringified) values in `raw_rows`, which
     `Session`'s own callers need for keys like the `index`/`chain`/`resnum`
     columns (row -> `LigandEntry`/`ReceptorEntry` position, contact-row ->
@@ -72,7 +72,7 @@ def _is_na(value) -> bool:
 
 
 class Session:
-    """One dd_cview window's worth of state. Not thread-safe; every method
+    """One dd_molview window's worth of state. Not thread-safe; every method
     is meant to be called from the Qt main thread only (matching the
     original desktop app's single-threaded Qt event-loop model -- nothing
     here releases the GIL or expects to run off it).

@@ -3,7 +3,7 @@
 // ships), without any Qt GUI involved. Plain asserts + a process exit code
 // rather than a test framework -- this is one deliberately narrow check
 // ("does the whole embedding wire up and produce sane output"), not a
-// substitute for dd_viewer's own pytest suite or dd_cview_core's
+// substitute for dd_viewer's own pytest suite or dd_molview_core's
 // (python/tests/), which already
 // cover the underlying logic this test just calls through to.
 #include "PythonBridge.h"

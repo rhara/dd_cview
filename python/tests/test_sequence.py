@@ -1,9 +1,9 @@
-"""Tests for dd_cview_core.sequence: chain sequence extraction + HTML rendering."""
+"""Tests for dd_molview_core.sequence: chain sequence extraction + HTML rendering."""
 import pandas as pd
 import dd_viewer as dv
 from dd_viewer.io import ATOM_COLUMNS
 
-from dd_cview_core.sequence import (
+from dd_molview_core.sequence import (
     HIGHLIGHT_COLOR,
     SELECTED_COLOR,
     UNKNOWN_RESIDUE_CODE,

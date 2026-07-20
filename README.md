@@ -1,6 +1,6 @@
 [Japanese version](README.jp.md)
 
-# dd_cview
+# dd_molview
 
 A native C++/Qt6 reimplementation of the retired `dd_molview-desktop`
 (PySide6) app's GUI shell -- the same four-panel workbench (protein table /
@@ -9,22 +9,22 @@ structure analysis, with every window, dock, table, and event handler
 rewritten in C++/Qt instead of PySide6. The computational logic underneath
 (PDB/SDF parsing, contact/interaction detection, scoring, RMSD, per-chain
 sequence extraction, 3D-scene HTML generation) is **not** reimplemented:
-`dd_cview` embeds a Python interpreter (via
+`dd_molview` embeds a Python interpreter (via
 [pybind11](https://github.com/pybind/pybind11)) and calls straight into two
 vendored Python modules under `python/`: `dd_viewer` (PDB/SDF parsing,
 interaction detection, scoring, scene HTML -- absorbed unmodified from the
-retired standalone `dd_viewer` project) and `dd_cview_core`
+retired standalone `dd_viewer` project) and `dd_molview_core`
 (multi-receptor/ligand collections, sequence extraction/HTML rendering,
 dashboard tables -- absorbed unmodified from `dd_molview`'s core logic when
 that project was retired in favor of this one), through one narrow
 JSON-in/JSON-out module,
-[`python/dd_cview_backend.py`](python/dd_cview_backend.py).
+[`python/dd_molview_backend.py`](python/dd_molview_backend.py).
 
 `dd_molview-desktop` (PySide6) was functionally complete but noticeably
 sluggish for interactive use -- table selection, settings toggles, and
 residue picks all route through Python's own Qt bindings and its
 single-threaded interpreter for *every* Qt event, not just the RDKit/
-biopython calls that actually need it. `dd_cview` keeps those calls (which
+biopython calls that actually need it. `dd_molview` keeps those calls (which
 dominate the actual wall-clock cost -- contact detection, interaction
 geometry, 3D-scene HTML generation) exactly as they were, and moves
 everything else -- widget construction, dock layout, table models, event
@@ -45,14 +45,14 @@ binding round-trip it didn't need to.
 └───────────────────────────────────────────┼──────────────────────────────┘
                                              │ pybind11::embed (JSON strings only)
 ┌────────────────────────────────────────────┼──────────────────────────────┐
-│ python/dd_cview_backend.py :: Session       ▼                             │
+│ python/dd_molview_backend.py :: Session       ▼                             │
 │  load_all / *_table_json / sequence_html / build_view_html / ...          │
 └──────────────────────┬──────────────────────────────────────────────────┘
                         │ plain function calls, unmodified
                         ▼
         dd_viewer (parsing, interactions, scoring, scene HTML --
                    vendored, absorbed from the retired dd_viewer project)
-        dd_cview_core (multi-receptor/ligand collections, sequence, dashboard --
+        dd_molview_core (multi-receptor/ligand collections, sequence, dashboard --
                        vendored, absorbed from the retired dd_molview project)
 ```
 
@@ -83,31 +83,31 @@ Every platform needs the same three things: CMake ≥3.21 with a C++20
 compiler, Qt6 (`Core`, `Widgets`, `WebEngineWidgets`, `WebChannel` -- the
 `WebEngineWidgets` part specifically means a full Qt6 + Chromium-based
 `qtwebengine` install is required, not just `qtbase`), and a Python
-environment with `dd_viewer`/`dd_cview_core`'s own dependencies installed
+environment with `dd_viewer`/`dd_molview_core`'s own dependencies installed
 (both modules themselves, under `python/`, need no separate install --
 see below). Only the first two are platform-specific to set up.
 
-`dd_cview` gets its own dedicated conda env, **`dd_cview`** -- kept
+`dd_molview` gets its own dedicated conda env, **`dd_molview`** -- kept
 separate from the `dd` env other `dd_*` projects share, so rebuilding or
 upgrading a package for one of those doesn't risk breaking this build (and
-vice versa). It only needs the subset of `dd_viewer`/`dd_cview_core`'s
-dependencies `dd_cview_backend.py` actually imports at runtime (RDKit,
+vice versa). It only needs the subset of `dd_viewer`/`dd_molview_core`'s
+dependencies `dd_molview_backend.py` actually imports at runtime (RDKit,
 biopython, pandas, numpy, py3Dmol) and `pybind11` -- *not* `dd_viewer`'s
-own extra GUI/web dependencies (Streamlit), which `dd_cview`'s embedded
+own extra GUI/web dependencies (Streamlit), which `dd_molview`'s embedded
 backend never touches:
 
 ```bash
-mamba create -n dd_cview -c conda-forge \
+mamba create -n dd_molview -c conda-forge \
     python=3.12 rdkit biopython pandas numpy py3dmol pybind11 pytest \
     qt6-main qt6-webengine
-conda activate dd_cview
+conda activate dd_molview
 ```
 
-Neither `python/dd_viewer/` nor `python/dd_cview_core/` needs installing --
+Neither `python/dd_viewer/` nor `python/dd_molview_core/` needs installing --
 both are this project's own vendored modules, and `python/` is added to
 sys.path directly at runtime (see `PythonBridge.cpp`).
 
-`dd_viewer`/`dd_cview_core`'s pytest suites (`python/tests/`, ported from
+`dd_viewer`/`dd_molview_core`'s pytest suites (`python/tests/`, ported from
 each project's own test suite when it was absorbed) run standalone, no C++
 build required:
 
@@ -128,18 +128,18 @@ active env.
 
 By default, the build embeds whichever Python `$CONDA_PREFIX/bin/python3`
 (`%CONDA_PREFIX%\python.exe` on Windows) points at when CMake is
-configured, falling back to the `dd_cview` env under the platform's
+configured, falling back to the `dd_molview` env under the platform's
 default miniforge location if no conda env is active -- override with
-`-DDD_CVIEW_PYTHON=/path/to/python3` (or `...\python.exe`) on any platform
+`-DDD_MOLVIEW_PYTHON=/path/to/python3` (or `...\python.exe`) on any platform
 to point at a different environment (a differently-named conda env, a
-plain venv) that has `dd_viewer`/`dd_cview_core`'s dependencies installed.
+plain venv) that has `dd_viewer`/`dd_molview_core`'s dependencies installed.
 
 ### macOS (Homebrew Qt6)
 
 ```bash
 brew install cmake ninja qt   # only if not using conda's qt6-main/qt6-webengine
 
-conda activate dd_cview
+conda activate dd_molview
 
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
@@ -158,7 +158,7 @@ sudo apt install cmake ninja-build build-essential \
     qt6-base-dev qt6-webengine-dev qt6-webengine-dev-tools
 # (skip the above if using conda's qt6-main/qt6-webengine instead)
 
-conda activate dd_cview
+conda activate dd_molview
 
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
@@ -170,7 +170,7 @@ Homebrew's `qt` formula) as a transitive dependency; apt-installed Qt6
 lands on CMake's default search path already, so no `CMAKE_PREFIX_PATH`
 override is needed the way it is on Windows. (Using conda's `qt6-main`/
 `qt6-webengine` instead needs no override either -- CMake picks it up off
-the active `dd_cview` env's own `CMAKE_PREFIX_PATH`.)
+the active `dd_molview` env's own `CMAKE_PREFIX_PATH`.)
 
 ### Windows (MSVC + Qt online installer)
 
@@ -186,7 +186,7 @@ the active `dd_cview` env's own `CMAKE_PREFIX_PATH`.)
    Homebrew/apt packages above, it is not pulled in automatically) -- this
    installs to a path like `C:\Qt\6.7.2\msvc2022_64`.
 4. Install [Miniforge](https://github.com/conda-forge/miniforge) for
-   Windows and set up `dd_cview`'s own conda env (see the `mamba create`/
+   Windows and set up `dd_molview`'s own conda env (see the `mamba create`/
    `pip install -e` commands above; drop `qt6-main qt6-webengine` from the
    `mamba create` line since Qt6 comes from the online installer here
    instead).
@@ -198,7 +198,7 @@ the active `dd_cview` env's own `CMAKE_PREFIX_PATH`.)
    cmake -S . -B build -G Ninja ^
      -DCMAKE_BUILD_TYPE=Release ^
      -DCMAKE_PREFIX_PATH=C:\Qt\6.7.2\msvc2022_64 ^
-     -DDD_CVIEW_PYTHON=%USERPROFILE%\miniforge3\envs\dd_cview\python.exe
+     -DDD_MOLVIEW_PYTHON=%USERPROFILE%\miniforge3\envs\dd_molview\python.exe
    cmake --build build
    ```
 
@@ -209,38 +209,38 @@ the active `dd_cview` env's own `CMAKE_PREFIX_PATH`.)
 ## Installing the built binary
 
 `cmake --install` copies the built executable plus a sibling `python/`
-(the `dd_cview_backend.py` module) and `data/` (bundled sample structures)
+(the `dd_molview_backend.py` module) and `data/` (bundled sample structures)
 directory into one self-contained, relocatable directory under whatever
 `--prefix` you choose -- copy or move that whole directory anywhere
-afterward and `dd_cview` still finds its own backend module next to
+afterward and `dd_molview` still finds its own backend module next to
 itself (see `PythonBridge.cpp`'s `resolvePythonDir()`). "Installing"
-`dd_cview` means picking a stable home for that directory and, optionally,
+`dd_molview` means picking a stable home for that directory and, optionally,
 putting the binary on your `PATH`.
 
 **This does not make the *embedded Python environment* itself portable**:
-the conda env/venv `-DDD_CVIEW_PYTHON` pointed at when the binary was
+the conda env/venv `-DDD_MOLVIEW_PYTHON` pointed at when the binary was
 *built* is baked in as its `PYTHONHOME` at compile time, and must still
 exist at that same path on whatever machine actually runs the installed
 binary. This is a personal/local build, not a distributable installer for
 other machines or other users' environments.
 
 **Running the installed binary needs *no* `conda activate` step, though**
--- `PYTHONHOME` (compile-time, from `DD_CVIEW_PYTHON_HOME`) and the
+-- `PYTHONHOME` (compile-time, from `DD_MOLVIEW_PYTHON_HOME`) and the
 dynamic linker `RUNPATH` to that same env's `lib/` (`BUILD_RPATH`/
 `INSTALL_RPATH` in `CMakeLists.txt`, see [Design notes](#design-notes))
 are both baked into the binary itself, not read from the shell's
 environment at launch time. Verified directly: `readelf -d
-build/dd_cview | grep RUNPATH` shows the env's `lib/` path baked in, and
+build/dd_molview | grep RUNPATH` shows the env's `lib/` path baked in, and
 running the installed binary under `env -i` (every environment variable
 scrubbed, including `PATH`/`CONDA_PREFIX` -- no active conda env, no
 `conda` even on `PATH`) still starts up and loads sample data correctly.
 What genuinely *is* required is only that the conda env's files
 themselves still physically exist, unmoved, at the path they were at when
-`dd_cview` was built (`/opt/miniforge3/envs/dd_cview` in this project's
+`dd_molview` was built (`/opt/miniforge3/envs/dd_molview` in this project's
 own build, for instance) -- deleting, renaming, or relocating that env
 breaks the installed binary (a dynamic-linker error for
 `libpython3.*.so`/`.dylib` before it even reaches `main()`), regardless of
-where `dd_cview` itself was installed to.
+where `dd_molview` itself was installed to.
 
 ```bash
 cmake --install build --prefix <any-writable-directory>
@@ -249,36 +249,36 @@ cmake --install build --prefix <any-writable-directory>
 ### macOS / Ubuntu
 
 ```bash
-cmake --install build --prefix ~/apps/dd_cview
-ln -sf ~/apps/dd_cview/dd_cview ~/.local/bin/dd_cview   # or /usr/local/bin, if writable
+cmake --install build --prefix ~/apps/dd_molview
+ln -sf ~/apps/dd_molview/dd_molview ~/.local/bin/dd_molview   # or /usr/local/bin, if writable
 ```
 
 (`~/.local/bin` is on `PATH` by default on most current Ubuntu/macOS
 shells; add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile
-if not.) Run it as `dd_cview` from anywhere afterward, or skip the symlink
-and just launch `~/apps/dd_cview/dd_cview` directly.
+if not.) Run it as `dd_molview` from anywhere afterward, or skip the symlink
+and just launch `~/apps/dd_molview/dd_molview` directly.
 
 ### Windows
 
 ```bat
-cmake --install build --prefix C:\Tools\dd_cview
+cmake --install build --prefix C:\Tools\dd_molview
 ```
 
-Then either add `C:\Tools\dd_cview` to your user `PATH` (Settings > System
+Then either add `C:\Tools\dd_molview` to your user `PATH` (Settings > System
 > About > Advanced system settings > Environment Variables), or create a
-shortcut to `C:\Tools\dd_cview\dd_cview.exe` (Desktop or Start Menu) --
+shortcut to `C:\Tools\dd_molview\dd_molview.exe` (Desktop or Start Menu) --
 there's no installer/uninstaller beyond that; it's a plain relocatable
 directory.
 
 **None of this is required for local development/testing** -- running
-`./build/dd_cview` (or `build\dd_cview.exe`) directly, straight out of the
+`./build/dd_molview` (or `build\dd_molview.exe`) directly, straight out of the
 build directory, works identically; `cmake --install` only matters once
 you want a stable location outside the build directory.
 
 ## Usage
 
 ```bash
-./build/dd_cview \
+./build/dd_molview \
   --receptor data/6W63_receptor.pdb --poses data/6W63_redock.sdf \
   --receptor data/7L10.pdb --receptor data/7L11.pdb \
   --reference data/6W63_ligand_ref.sdf   # optional: for RMSD calculation
@@ -293,22 +293,22 @@ Poses...", "Open Reference...", "Open Manifest..."), exactly as in
 **If no poses file is given at all**, every loaded receptor is scanned for
 embedded ligands and the results merged into one ligand list -- same
 all-or-nothing auto-extraction rule as the retired `dd_molview` (this logic
-runs unmodified inside `dd_cview_core.load_all`, `dd_cview` just calls it).
+runs unmodified inside `dd_molview_core.load_all`, `dd_molview` just calls it).
 
 ### Ensemble manifest.json
 
 ```bash
-./build/dd_cview --manifest data/sample_manifest.json
+./build/dd_molview --manifest data/sample_manifest.json
 ```
 
-Same dd_docking-style `manifest.json` format `dd_cview_core` reads (a plain
+Same dd_docking-style `manifest.json` format `dd_molview_core` reads (a plain
 JSON list of `{member_id, receptor_pdb, ...}` objects, duck-typed, no
 `dd_docking` import) -- loaded additively alongside any `--receptor` paths.
 
 ## Features
 
 Every panel behaves identically to the retired `dd_molview-desktop`'s own
-(same underlying `dd_viewer`/`dd_cview_core` calls, just through native `QTableView`/
+(same underlying `dd_viewer`/`dd_molview_core` calls, just through native `QTableView`/
 `QWebEngineView`/`QTextBrowser` widgets instead of PySide6's):
 
 - **Protein-selection panel**: one row per loaded receptor (label,
@@ -364,7 +364,7 @@ the active protein/ligand row or toggling a display setting never moves
 the camera; only dragging/zooming it yourself, "Center on Ligand", or
 "Zoom to Highlighted Residues" does.
 
-**`dd_cview`-only addition** (not present in `dd_molview-desktop`): the
+**`dd_molview`-only addition** (not present in `dd_molview-desktop`): the
 Settings dock has a second camera button, **Zoom to Highlighted
 Residues**, next to "Center on Ligand" -- re-fits the camera to whatever
 residues are currently highlighted yellow (a live `zoomTo({predicate:
@@ -387,26 +387,26 @@ level.
 | `DisplaySettingsPanel.h`/`.cpp` | The settings dock's controls -- one-to-one with the retired `dd_molview.desktop.controls.DisplaySettingsPanel`. |
 | `SequencePanel.h`/`.cpp` | A `QTextBrowser` subclass with the sequence panel's font/link-handling setup. |
 | `Viewer3D.h`/`.cpp` | Wraps the 3D view's `QWebEngineView`: loading a freshly built scene, the async `getView()` camera-capture round-trip, and `zoomTo({chain})` for chain-header clicks. |
-| `main.cpp` | Entry point: CLI parsing (`--receptor`/`--poses`/`--reference`/`--manifest`), `QApplication` setup, and an optional `DD_CVIEW_SCREENSHOT` env-var hook for headless verification (see below). |
+| `main.cpp` | Entry point: CLI parsing (`--receptor`/`--poses`/`--reference`/`--manifest`), `QApplication` setup, and an optional `DD_MOLVIEW_SCREENSHOT` env-var hook for headless verification (see below). |
 
-`python/dd_cview_backend.py` is the Python-side counterpart -- see the
+`python/dd_molview_backend.py` is the Python-side counterpart -- see the
 [Architecture](#architecture) section above.
 
 ## Design notes
 
 - **No computational logic is duplicated in C++.** Every PDB/SDF parse,
   distance calculation, RDKit call, or HTML-generation step happens in
-  Python, inside `dd_viewer`/`dd_cview_core`, completely unmodified. `dd_cview`
+  Python, inside `dd_viewer`/`dd_molview_core`, completely unmodified. `dd_molview`
   only ever passes primitives across the pybind11 boundary.
 - **`PythonBridge` never leaks a `py::object`.** Its public API (see
   `PythonBridge.h`) is Qt/std types only, so no other file in the project
   needs to know pybind11 exists, and the `Python.h`/`qobjectdefs.h` `slots`
   clash never has a chance to occur outside `PythonBridge.cpp`.
 - **PYTHONHOME is set explicitly, and `sys.path`'s cwd entry is stripped.**
-  `dd_cview` lives under the same parent directory (`~/work`) as other,
+  `dd_molview` lives under the same parent directory (`~/work`) as other,
   unrelated top-level checkouts that happen to share a name with a Python
   package it imports (e.g. a leftover `dd_viewer` checkout with no
-  `__init__.py` at its own top level); if `dd_cview` is launched with that
+  `__init__.py` at its own top level); if `dd_molview` is launched with that
   parent as its working directory, a bare `""` `sys.path` entry resolves
   `import dd_viewer` to a broken *namespace* package rooted at that
   directory instead of the real vendored `python/dd_viewer/` -- silently,
@@ -424,12 +424,12 @@ level.
   `setenv`, which MSVC's CRT doesn't provide) so the same code builds on
   Windows; `PYTHONHOME`'s *value* is queried directly from the target
   interpreter via `sys.prefix` at CMake-configure time rather than derived
-  by counting directories up from `DD_CVIEW_PYTHON`, since how many levels
+  by counting directories up from `DD_MOLVIEW_PYTHON`, since how many levels
   that takes differs by both platform *and* env flavor (conda-on-Windows:
   the interpreter already sits in the env root; conda-on-POSIX and a POSIX
   venv's `bin/`: one level up; a Windows venv's `Scripts/`: also one level
   up) -- `sys.prefix` sidesteps guessing which convention applies. On
-  macOS/Linux, `dd_cview`'s CMake target also gets an explicit
+  macOS/Linux, `dd_molview`'s CMake target also gets an explicit
   `INSTALL_RPATH` pointing at that same env's `lib/` directory -- without
   it, an installed (`cmake --install`) binary dies at startup with a
   dynamic-linker error (`Library not loaded: @rpath/libpython3.12.dylib` /
@@ -438,11 +438,11 @@ level.
   *build-tree* binary, not an installed one.
 - **An installed binary finds its own backend module relative to itself,
   not the source checkout.** `PythonBridge.cpp`'s `resolvePythonDir()`
-  first looks for `python/dd_cview_backend.py` next to the running
+  first looks for `python/dd_molview_backend.py` next to the running
   executable (`QCoreApplication::applicationDirPath()`) -- the layout
   `cmake --install` produces (see [Installing the built
   binary](#installing-the-built-binary)) -- and only falls back to the
-  compile-time source-tree path (`DD_CVIEW_PYTHON_DIR`) if that's not
+  compile-time source-tree path (`DD_MOLVIEW_PYTHON_DIR`) if that's not
   there, which is what makes a `cmake --install`'d directory genuinely
   relocatable (copy/move it anywhere) instead of permanently depending on
   the exact build directory it came from.
@@ -466,14 +466,14 @@ returns sane values end to end through the actual embedded interpreter --
 run it with `ctest --test-dir build`.
 
 The full GUI was verified headless (`QT_QPA_PLATFORM=offscreen`, screenshots
-via the `DD_CVIEW_SCREENSHOT` env var / `QWidget::grab()`, same technique
+via the `DD_MOLVIEW_SCREENSHOT` env var / `QWidget::grab()`, same technique
 `dd_molview-desktop`'s own test suite uses): launching with the bundled
 6W63 + 7L10 receptors, 6W63's poses, and its reference ligand populates the
 Proteins/Ligands tables and the Chains panel (including yellow contact-
 residue highlighting) correctly; launching with no arguments shows the
 correct empty state (empty tables, "Show reference ligand" disabled); and
 launching with the process's working directory set to the parent directory
-shared by `dd_viewer`/`dd_cview` (the exact scenario the
+shared by `dd_viewer`/`dd_molview` (the exact scenario the
 `sys.path` fix above addresses) still loads data correctly. As with
 `dd_molview-desktop`, real `QWebEngineView` WebGL rendering isn't
 observable under `QT_QPA_PLATFORM=offscreen` -- the 3D view's actual
@@ -482,7 +482,7 @@ to confirm visually (this also means "Save 3D View Screenshot..." itself
 hasn't been visually confirmed to capture real rendered content, only that
 it doesn't crash and writes *a* PNG); the interaction/camera *logic*
 itself is exercised (unmodified) by `dd_viewer`'s own test suite and
-`dd_cview_core`'s (`python/tests/`), which this project doesn't duplicate.
+`dd_molview_core`'s (`python/tests/`), which this project doesn't duplicate.
 
 `cmake --install`'s relocatability was verified directly: installing to a
 throwaway prefix (`cmake --install build --prefix /tmp/...`) and running
@@ -499,7 +499,7 @@ the Ubuntu/Windows build and install instructions above are
 standard-convention but unverified here (see
 [Installation](#installation)), **except** for the
 `mamba create`/conda-Qt6 configure+build+`ctest` path (using the dedicated
-`dd_cview` env, `qt6-main`/`qt6-webengine`), which was exercised end to
+`dd_molview` env, `qt6-main`/`qt6-webengine`), which was exercised end to
 end on Ubuntu (`bridge_smoke_test` passing) when that env was split off
 from the shared `dd` one -- the full headless-GUI screenshot check and
 `cmake --install` relocatability above were not re-run there, only on

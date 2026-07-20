@@ -16,14 +16,14 @@ int main(int argc, char** argv) {
     // without these, QSettings() falls back to the executable's own name,
     // which can differ between a build directory binary and an installed
     // one.
-    QApplication::setOrganizationName("dd_cview");
-    QApplication::setApplicationName("dd_cview");
+    QApplication::setOrganizationName("dd_molview");
+    QApplication::setApplicationName("dd_molview");
     QApplication::setApplicationVersion("0.1.0");
     app.setWindowIcon(QIcon(":/icon.png"));
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        "dd_cview: a native C++/Qt multi-panel workbench for interactive protein-ligand structure analysis.");
+        "dd_molview: a native C++/Qt multi-panel workbench for interactive protein-ligand structure analysis.");
     parser.addHelpOption();
     parser.addVersionOption();
     QCommandLineOption receptorOption("receptor", "Receptor PDB path (repeatable).", "path");
@@ -46,8 +46,8 @@ int main(int argc, char** argv) {
         window = std::make_unique<MainWindow>();
     } catch (const std::exception& e) {
         QMessageBox::critical(
-            nullptr, "dd_cview failed to start",
-            QString("Could not initialize the embedded Python interpreter (dd_viewer/dd_cview_core):\n\n%1")
+            nullptr, "dd_molview failed to start",
+            QString("Could not initialize the embedded Python interpreter (dd_viewer/dd_molview_core):\n\n%1")
                 .arg(QString::fromUtf8(e.what())));
         return 1;
     }
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
     // QWidget::grab() screenshots without a real display): if set, capture
     // the window to this path a couple seconds after the 3D view's async
     // JS round-trip has had time to settle, then quit.
-    if (const char* screenshotPath = std::getenv("DD_CVIEW_SCREENSHOT")) {
+    if (const char* screenshotPath = std::getenv("DD_MOLVIEW_SCREENSHOT")) {
         QString path = QString::fromLocal8Bit(screenshotPath);
         QTimer::singleShot(2000, window.get(), [win = window.get(), path]() {
             win->grab().save(path);

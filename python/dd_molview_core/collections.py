@@ -71,7 +71,7 @@ def load_poses_multi(paths: Sequence[str]) -> list[LigandEntry]:
     The list's own position is the stable "global index" for UI row
     selection -- unlike `dd_viewer.Pose.index` (which restarts at 0 for
     each source file and is left untouched here), there's no need to
-    re-index anything: `dd_cview_core` owns this list outright.
+    re-index anything: `dd_molview_core` owns this list outright.
     """
     entries = []
     for path in paths:
@@ -85,7 +85,7 @@ def load_receptors_from_manifest(path: str) -> list[ReceptorEntry]:
     """Batch-load receptors from a dd_docking-style `manifest.json` -- a
     plain JSON list of objects with at least `member_id` and
     `receptor_pdb` keys. Duck-typed (`json.load` + `.get(...)`), no
-    `dd_docking` import, so `dd_cview_core` stays independent of it.
+    `dd_docking` import, so `dd_molview_core` stays independent of it.
 
     A relative `receptor_pdb` path is resolved against the manifest
     file's own directory (real dd_docking output uses absolute paths, but
@@ -130,7 +130,7 @@ def load_all(
     one global list.
 
     Framework-agnostic (no Streamlit/Qt import) so every UI built on top of
-    `dd_cview_core` shares this exact branching logic instead of duplicating
+    `dd_molview_core` shares this exact branching logic instead of duplicating
     it; a caller wanting caching (e.g. Streamlit's `st.cache_data`) wraps
     this function rather than reimplementing it.
     """

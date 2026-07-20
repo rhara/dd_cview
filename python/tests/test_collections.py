@@ -1,5 +1,5 @@
-"""Tests for dd_cview_core.collections: multi-receptor / multi-ligand loading."""
-from dd_cview_core.collections import (
+"""Tests for dd_molview_core.collections: multi-receptor / multi-ligand loading."""
+from dd_molview_core.collections import (
     LigandEntry,
     ReceptorEntry,
     load_all,

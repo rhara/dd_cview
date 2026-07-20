@@ -1,4 +1,4 @@
-// Read-only Qt table model backing every table in dd_cview (protein /
+// Read-only Qt table model backing every table in dd_molview (protein /
 // ligand / contact-residue) -- the C++ analog of dd_molview's
 // `desktop/table_model.py::DataFrameTableModel`, wrapping a `TableData`
 // (see PythonBridge.h) instead of a `pandas.DataFrame`.

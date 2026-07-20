@@ -1,7 +1,7 @@
-// PythonBridge: the one seam between dd_cview's native C++/Qt GUI shell and
-// dd_viewer/dd_cview_core's existing Python computational logic (PDB/SDF
+// PythonBridge: the one seam between dd_molview's native C++/Qt GUI shell and
+// dd_viewer/dd_molview_core's existing Python computational logic (PDB/SDF
 // parsing, contact/interaction detection, scoring, RMSD, sequence
-// extraction, 3D-scene HTML generation). See python/dd_cview_backend.py for
+// extraction, 3D-scene HTML generation). See python/dd_molview_backend.py for
 // the Python-side counterpart (`Session`) this class talks to.
 //
 // Deliberately Python/pybind11-agnostic in this header (only Qt value types

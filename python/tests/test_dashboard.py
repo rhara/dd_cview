@@ -1,6 +1,6 @@
-"""Tests for dd_cview_core.dashboard: protein/ligand summary tables."""
-from dd_cview_core.collections import LigandEntry, load_all, load_poses_multi, load_receptors
-from dd_cview_core.dashboard import ligands_dataframe, receptors_dataframe
+"""Tests for dd_molview_core.dashboard: protein/ligand summary tables."""
+from dd_molview_core.collections import LigandEntry, load_all, load_poses_multi, load_receptors
+from dd_molview_core.dashboard import ligands_dataframe, receptors_dataframe
 
 
 class TestReceptorsDataframe:

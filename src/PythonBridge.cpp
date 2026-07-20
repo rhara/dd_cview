@@ -18,11 +18,11 @@
 
 namespace py = pybind11;
 
-#ifndef DD_CVIEW_PYTHON_DIR
-#error "DD_CVIEW_PYTHON_DIR must be defined by CMake (see CMakeLists.txt)"
+#ifndef DD_MOLVIEW_PYTHON_DIR
+#error "DD_MOLVIEW_PYTHON_DIR must be defined by CMake (see CMakeLists.txt)"
 #endif
-#ifndef DD_CVIEW_PYTHON_HOME
-#error "DD_CVIEW_PYTHON_HOME must be defined by CMake (see CMakeLists.txt)"
+#ifndef DD_MOLVIEW_PYTHON_HOME
+#error "DD_MOLVIEW_PYTHON_HOME must be defined by CMake (see CMakeLists.txt)"
 #endif
 
 namespace {
@@ -111,19 +111,19 @@ QVector<ResiduePair> parseResidues(const QJsonArray& arr) {
     return residues;
 }
 
-// Where dd_cview_backend.py actually lives at runtime. An *installed*
+// Where dd_molview_backend.py actually lives at runtime. An *installed*
 // binary (see CMakeLists.txt's install() rules) has it in a sibling
 // "python/" directory next to the executable, which makes the whole
 // install directory relocatable -- copy it anywhere and it still finds its
-// own backend module. Falls back to the compile-time DD_CVIEW_PYTHON_DIR
+// own backend module. Falls back to the compile-time DD_MOLVIEW_PYTHON_DIR
 // (the source checkout's own python/ directory) for a binary run straight
 // out of the build directory, which has no such sibling.
 QString resolvePythonDir() {
     QString installedDir = QDir(QCoreApplication::applicationDirPath()).filePath("python");
-    if (QFileInfo::exists(installedDir + "/dd_cview_backend.py")) {
+    if (QFileInfo::exists(installedDir + "/dd_molview_backend.py")) {
         return installedDir;
     }
-    return QString::fromUtf8(DD_CVIEW_PYTHON_DIR);
+    return QString::fromUtf8(DD_MOLVIEW_PYTHON_DIR);
 }
 
 }  // namespace
@@ -137,25 +137,25 @@ struct PythonBridge::Impl {
 };
 
 PythonBridge::PythonBridge() : impl_(std::make_unique<Impl>()) {
-    // dd_viewer/dd_cview_core's own dependencies (RDKit, biopython,
+    // dd_viewer/dd_molview_core's own dependencies (RDKit, biopython,
     // pandas, numpy) live in a specific conda env's site-packages (see
     // README.md's install instructions); point the embedded interpreter's
     // PYTHONHOME at that env's prefix *before* Py_Initialize runs, so
     // `site.py` finds them the same way `python3` invoked from that env
     // would, regardless of what environment (if any) is active in the
-    // shell that launched dd_cview. qputenv (not the POSIX-only `setenv`)
+    // shell that launched dd_molview. qputenv (not the POSIX-only `setenv`)
     // so this builds on Windows too, where MSVC's CRT has no `setenv`.
-    qputenv("PYTHONHOME", QByteArray(DD_CVIEW_PYTHON_HOME));
+    qputenv("PYTHONHOME", QByteArray(DD_MOLVIEW_PYTHON_HOME));
 
     impl_->interpreter = std::make_unique<py::scoped_interpreter>();
 
     py::module_ sys = py::module_::import("sys");
     // Drop any cwd-derived entry (an empty string, or the interpreter's
-    // own inferred cwd) from sys.path before importing anything: dd_cview
+    // own inferred cwd) from sys.path before importing anything: dd_molview
     // lives under the same ~/work parent as other, unrelated top-level
     // directories that happen to be named after Python packages it
     // imports (e.g. a leftover "dd_viewer" checkout with no __init__.py
-    // at its own top level), so if dd_cview is launched with cwd set to
+    // at its own top level), so if dd_molview is launched with cwd set to
     // that parent directory, a bare "" entry resolves `import dd_viewer`
     // to a broken *namespace* package rooted there instead of the real
     // vendored python/dd_viewer/ -- see the project's PROMPT for how this
@@ -172,7 +172,7 @@ PythonBridge::PythonBridge() : impl_(std::make_unique<Impl>()) {
     sys.attr("path") = cleanPath;
     sys.attr("path").attr("insert")(0, resolvePythonDir().toStdString());
 
-    py::module_ backend = py::module_::import("dd_cview_backend");
+    py::module_ backend = py::module_::import("dd_molview_backend");
     impl_->session = backend.attr("create_session")();
 }
 

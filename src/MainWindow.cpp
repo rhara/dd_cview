@@ -35,7 +35,7 @@ std::vector<ResiduePair> toStdVector(const QVector<ResiduePair>& v) {
 }  // namespace
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    setWindowTitle("dd_cview");
+    setWindowTitle("dd_molview");
 
     bridge_ = std::make_unique<PythonBridge>();
 
@@ -182,7 +182,7 @@ void MainWindow::buildMenuAndToolbar() {
     fileMenu->addSeparator();
     QAction* quitAction = fileMenu->addAction("&Quit");
     // QuitRole: on macOS, Qt moves this out of the File menu into the
-    // application menu automatically ("dd_cview > Quit dd_cview") -- the
+    // application menu automatically ("dd_molview > Quit dd_molview") -- the
     // platform-standard location, not an oversight.
     quitAction->setMenuRole(QAction::QuitRole);
     // Alt+Q on Linux (as requested) -- Ctrl+Q elsewhere, which Qt itself

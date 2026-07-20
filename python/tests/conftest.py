@@ -1,4 +1,4 @@
-"""Shared fixtures for dd_cview_core's pytest suite."""
+"""Shared fixtures for dd_molview_core's pytest suite."""
 from pathlib import Path
 
 import pytest
