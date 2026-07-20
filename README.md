@@ -337,6 +337,12 @@ underlying `dd_viewer`/`dd_molview` calls, just through native `QTableView`/
   3D-view capture in this project, `grab()` can't see WebGL content under
   `QT_QPA_PLATFORM=offscreen` -- see [Verified
   behavior](#verified-behavior)).
+- **Quit** (File menu, bottom entry): closes the window (running the same
+  `closeEvent` that saves dock/geometry state via `QSettings`, so layout
+  persists across restarts) and exits the application. Keyboard shortcut
+  is **Alt+Q** on Linux; **Cmd+Q** on macOS (and, per the platform's own
+  convention, also relocated out of the File menu into the application
+  menu there); **Ctrl+Q** on Windows.
 
 **Camera behavior** and **multi-residue selection** follow the exact same
 rules as `dd_molview-desktop` (see [its

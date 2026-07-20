@@ -179,6 +179,23 @@ void MainWindow::buildMenuAndToolbar() {
     fileToolbar->addSeparator();
     fileToolbar->addAction(saveScreenshotAction);
 
+    fileMenu->addSeparator();
+    QAction* quitAction = fileMenu->addAction("&Quit");
+    // QuitRole: on macOS, Qt moves this out of the File menu into the
+    // application menu automatically ("dd_cview > Quit dd_cview") -- the
+    // platform-standard location, not an oversight.
+    quitAction->setMenuRole(QAction::QuitRole);
+    // Alt+Q on Linux (as requested) -- Ctrl+Q elsewhere, which Qt itself
+    // remaps to Cmd+Q on macOS (Qt::ControlModifier <-> the Command key),
+    // so this one line already covers the Windows/macOS "equivalent
+    // shortcut" case too.
+#ifdef Q_OS_LINUX
+    quitAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_Q));
+#else
+    quitAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q));
+#endif
+    connect(quitAction, &QAction::triggered, this, &QWidget::close);
+
     // "Center on Ligand" and "Zoom to Highlighted Residues" live only in
     // the Settings dock now (buildWidgets/DisplaySettingsPanel) -- both are
     // camera-only actions that make more sense grouped with the rest of
