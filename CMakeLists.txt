@@ -26,15 +26,26 @@ if(APPLE AND NOT DEFINED CMAKE_PREFIX_PATH)
   endif()
 endif()
 
+# conda-forge's qt6-main/qt6-webengine packages (an alternative to a
+# system Qt6 install -- see README.md's Installation section) don't ship
+# an activate.d script that registers themselves on CMAKE_PREFIX_PATH the
+# way some other conda packages do; fall back to the active env's own
+# prefix so `find_package(Qt6)` below can still find them there.
+if(NOT DEFINED CMAKE_PREFIX_PATH AND DEFINED ENV{CONDA_PREFIX})
+  list(APPEND CMAKE_PREFIX_PATH "$ENV{CONDA_PREFIX}")
+endif()
+
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets WebEngineWidgets WebChannel)
 
 # --- Embedded Python (dd_viewer/dd_molview's own interpreter) --------
 # dd_cview reuses dd_viewer/dd_molview's existing Python logic as-is (see
 # python/dd_cview_backend.py) rather than reimplementing PDB/SDF parsing,
-# contact detection, scoring, etc. in C++. It therefore needs the *same*
-# interpreter those packages are installed into -- default to the `dd`
-# conda env (see ~/work/dd_molview/README.md's install instructions), but
-# let a caller override it (a differently-named env, a plain venv) via
+# contact detection, scoring, etc. in C++. It therefore needs an
+# interpreter with dd_viewer/dd_molview (editable-)installed into it --
+# default to dd_cview's own dedicated `dd_cview` conda env (see README.md's
+# install instructions; kept separate from the `dd` env other dd_* projects
+# share, so rebuilding/upgrading those doesn't risk breaking this build),
+# but let a caller override it (a differently-named env, a plain venv) via
 # `-DDD_CVIEW_PYTHON=/path/to/python3` (or `...\python.exe` on Windows).
 # A conda env lays its interpreter out differently per platform -- POSIX:
 # "<prefix>/bin/python3"; Windows: "<prefix>/python.exe" directly, no
@@ -44,13 +55,13 @@ if(NOT DEFINED DD_CVIEW_PYTHON)
     if(DEFINED ENV{CONDA_PREFIX})
       set(DD_CVIEW_PYTHON "$ENV{CONDA_PREFIX}/python.exe")
     else()
-      set(DD_CVIEW_PYTHON "$ENV{USERPROFILE}/miniforge3/envs/dd/python.exe")
+      set(DD_CVIEW_PYTHON "$ENV{USERPROFILE}/miniforge3/envs/dd_cview/python.exe")
     endif()
   else()
     if(DEFINED ENV{CONDA_PREFIX})
       set(DD_CVIEW_PYTHON "$ENV{CONDA_PREFIX}/bin/python3")
     else()
-      set(DD_CVIEW_PYTHON "$ENV{HOME}/miniforge3/envs/dd/bin/python3")
+      set(DD_CVIEW_PYTHON "$ENV{HOME}/miniforge3/envs/dd_cview/bin/python3")
     endif()
   endif()
 endif()

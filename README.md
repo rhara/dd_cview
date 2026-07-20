@@ -75,35 +75,56 @@ type casters, no long-lived `py::object` handles anywhere outside
 Every platform needs the same three things: CMake ≥3.21 with a C++20
 compiler, Qt6 (`Core`, `Widgets`, `WebEngineWidgets`, `WebChannel` -- the
 `WebEngineWidgets` part specifically means a full Qt6 + Chromium-based
-`qtwebengine` install is required, not just `qtbase`), and the same Python
-environment `dd_molview` itself runs in (`dd_viewer` + `dd_molview`
-installed, editable or not, plus their own dependencies -- RDKit,
-biopython, pandas, numpy -- and `pybind11`, which only needs to be
-importable from that environment, not separately installed as a system
-package). Only the first two are platform-specific to set up; the Python
-side is the same conda/miniforge env on every OS (see
-[`../dd_molview/README.md`](../dd_molview/README.md#installation) for the
-full from-scratch setup). **Only the macOS steps below have actually been
-build-verified in this project** (see
-[Verified behavior](#verified-behavior)) -- the Ubuntu/Windows steps follow
-the standard Qt6/CMake conventions for each platform but haven't been
-exercised on real Ubuntu/Windows machines from here.
+`qtwebengine` install is required, not just `qtbase`), and a Python
+environment with `dd_viewer`/`dd_molview` installed. Only the first two
+are platform-specific to set up.
+
+`dd_cview` gets its own dedicated conda env, **`dd_cview`** -- kept
+separate from the `dd` env other `dd_*` projects share, so rebuilding or
+upgrading a package for one of those doesn't risk breaking this build (and
+vice versa). It only needs `dd_viewer`/`dd_molview` themselves plus the
+subset of their dependencies `dd_cview_backend.py` actually imports at
+runtime (RDKit, biopython, pandas, numpy, py3Dmol) and `pybind11` --
+*not* their own extra GUI/web dependencies (Streamlit, PySide6), which
+`dd_cview`'s embedded backend never touches:
+
+```bash
+mamba create -n dd_cview -c conda-forge \
+    python=3.12 rdkit biopython pandas numpy py3dmol pybind11 \
+    qt6-main qt6-webengine
+conda activate dd_cview
+
+# dd_viewer/dd_molview themselves aren't on conda-forge -- editable-install
+# straight from their checkouts, --no-deps since their conda-installed
+# dependencies above already cover everything dd_cview actually imports.
+pip install --no-deps -e ../dd_viewer -e ../dd_molview
+```
+
+`qt6-main` + `qt6-webengine` above pull a complete Qt6 (including
+WebEngineWidgets/WebChannel) straight from conda-forge, which is what's
+actually been build-verified for this project on Linux (see
+[Verified behavior](#verified-behavior)) -- no system/Homebrew/apt Qt6
+install needed on top of it. If you'd rather use a system Qt6 install
+instead (Homebrew on macOS, apt on Ubuntu, the Qt online installer on
+Windows), drop `qt6-main qt6-webengine` from the `mamba create` line above
+and follow the platform-specific Qt6 install steps below instead; either
+way, CMake picks up whichever Qt6 it finds via `CMAKE_PREFIX_PATH`/the
+active env.
 
 By default, the build embeds whichever Python `$CONDA_PREFIX/bin/python3`
 (`%CONDA_PREFIX%\python.exe` on Windows) points at when CMake is
-configured, falling back to a `dd` env under the platform's default
-miniforge location if no conda env is active -- override with
+configured, falling back to the `dd_cview` env under the platform's
+default miniforge location if no conda env is active -- override with
 `-DDD_CVIEW_PYTHON=/path/to/python3` (or `...\python.exe`) on any platform
 to point at a different environment (a differently-named conda env, a
 plain venv) that has `dd_viewer`/`dd_molview` installed.
 
-### macOS (Homebrew)
+### macOS (Homebrew Qt6)
 
 ```bash
-brew install cmake qt ninja
+brew install cmake ninja qt   # only if not using conda's qt6-main/qt6-webengine
 
-conda activate dd
-pip install pybind11   # if not already present
+conda activate dd_cview
 
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
@@ -114,15 +135,15 @@ path); `CMakeLists.txt` already runs `brew --prefix qt` itself and appends
 it to `CMAKE_PREFIX_PATH`, so no manual `-DCMAKE_PREFIX_PATH` is needed
 here (unlike Windows below).
 
-### Ubuntu (22.04 / 24.04)
+### Ubuntu (22.04 / 24.04, apt Qt6)
 
 ```bash
 sudo apt update
 sudo apt install cmake ninja-build build-essential \
     qt6-base-dev qt6-webengine-dev qt6-webengine-dev-tools
+# (skip the above if using conda's qt6-main/qt6-webengine instead)
 
-conda activate dd
-pip install pybind11   # if not already present
+conda activate dd_cview
 
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
@@ -132,7 +153,9 @@ cmake --build build
 their own large dependency chain -- same underlying Chromium cost as
 Homebrew's `qt` formula) as a transitive dependency; apt-installed Qt6
 lands on CMake's default search path already, so no `CMAKE_PREFIX_PATH`
-override is needed the way it is on Windows.
+override is needed the way it is on Windows. (Using conda's `qt6-main`/
+`qt6-webengine` instead needs no override either -- CMake picks it up off
+the active `dd_cview` env's own `CMAKE_PREFIX_PATH`.)
 
 ### Windows (MSVC + Qt online installer)
 
@@ -148,8 +171,10 @@ override is needed the way it is on Windows.
    Homebrew/apt packages above, it is not pulled in automatically) -- this
    installs to a path like `C:\Qt\6.7.2\msvc2022_64`.
 4. Install [Miniforge](https://github.com/conda-forge/miniforge) for
-   Windows and set up the same `dd` conda env `dd_molview` uses (see its
-   README), then `pip install pybind11` into it.
+   Windows and set up `dd_cview`'s own conda env (see the `mamba create`/
+   `pip install -e` commands above; drop `qt6-main qt6-webengine` from the
+   `mamba create` line since Qt6 comes from the online installer here
+   instead).
 5. Build from an **"x64 Native Tools Command Prompt for VS 2022"** (needed
    so `cl.exe` is on `PATH`; a plain `cmd.exe`/PowerShell window won't have
    it):
@@ -158,7 +183,7 @@ override is needed the way it is on Windows.
    cmake -S . -B build -G Ninja ^
      -DCMAKE_BUILD_TYPE=Release ^
      -DCMAKE_PREFIX_PATH=C:\Qt\6.7.2\msvc2022_64 ^
-     -DDD_CVIEW_PYTHON=%USERPROFILE%\miniforge3\envs\dd\python.exe
+     -DDD_CVIEW_PYTHON=%USERPROFILE%\miniforge3\envs\dd_cview\python.exe
    cmake --build build
    ```
 
@@ -434,7 +459,13 @@ rpath-stripping default applies there too). Only the macOS build itself,
 and this macOS install flow, were actually exercised in this project --
 the Ubuntu/Windows build and install instructions above are
 standard-convention but unverified here (see
-[Installation](#installation)).
+[Installation](#installation)), **except** for the
+`mamba create`/conda-Qt6 configure+build+`ctest` path (using the dedicated
+`dd_cview` env, `qt6-main`/`qt6-webengine`), which was exercised end to
+end on Ubuntu (`bridge_smoke_test` passing) when that env was split off
+from the shared `dd` one -- the full headless-GUI screenshot check and
+`cmake --install` relocatability above were not re-run there, only on
+macOS.
 
 ## License
 
