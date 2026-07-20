@@ -1,6 +1,6 @@
 [English version](README.md)
 
-# dd_molview
+# dd_molview — ネイティブC++/Qt6の蛋白質-リガンドワークベンチ、計算コアはPythonを埋め込んで再利用
 
 廃止された `dd_molview-desktop`（PySide6版）のデスクトップGUIシェルを
 ネイティブC++/Qt6で再実装したもの。蛋白質テーブル/リガンドテーブル/3D

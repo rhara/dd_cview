@@ -1,6 +1,6 @@
 [Japanese version](README.jp.md)
 
-# dd_molview
+# dd_molview — A native C++/Qt6 protein-ligand workbench, powered by an embedded Python core
 
 A native C++/Qt6 reimplementation of the retired `dd_molview-desktop`
 (PySide6) app's GUI shell -- the same four-panel workbench (protein table /
