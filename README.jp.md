@@ -98,6 +98,20 @@ mamba create -n dd_molview -c conda-forge \
 conda activate dd_molview
 ```
 
+> **既知の制約: Intel Mac（`osx-64`）はこの方法に非対応。**
+> conda-forgeは `osx-64` 向けの `qt6-webengine` ビルドを提供していない
+> ——公開されているのは `osx-arm64`、`linux-64`、`win-64` のみ——ため、
+> 上の `mamba create ... qt6-main qt6-webengine` はIntel Macでは解決に
+> 失敗する（`... qt6-webengine =* * does not exist`）。`dd_suite/scripts/
+> install_all.py` はこれを検知し、`osx-64` では `dd_molview` のenv作成を
+> 自動的にスキップする。回避策: 上の `mamba create` から
+> `qt6-main qt6-webengine` を外し、代わりにシステム側のQt6を使う——下の
+> [macOS (Homebrew Qt6)](#macos-homebrew-qt6) 節を参照（`brew install qt`
+> はApple SiliconとIntelの両方に `qtwebengine` 込みのボトルを提供して
+> いる）。ただしこのルートは、本プロジェクトではIntel Macで個別に
+> ビルド検証されたことはない（[動作検証](#動作検証)参照。確認済みなのは
+> macOS一般としてのみ）。
+
 `python/dd_viewer/` も `python/dd_molview_core/` もインストール不要——
 どちらもこのプロジェクト自前のモジュールで、`python/` が実行時に
 sys.pathへ直接追加される（`PythonBridge.cpp` 参照）。
