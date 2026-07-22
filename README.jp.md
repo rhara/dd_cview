@@ -108,9 +108,8 @@ conda activate dd_molview
 > インストールされる）。Qt6側の回避策: 代わりにシステム側のQt6を使う——下の
 > [macOS (Homebrew Qt6)](#macos-homebrew-qt6) 節を参照（`brew install qt`
 > はApple SiliconとIntelの両方に `qtwebengine` 込みのボトルを提供して
-> いる）。ただしこのルートは、本プロジェクトではIntel Macで個別に
-> ビルド検証されたことはない（[動作検証](#動作検証)参照。確認済みなのは
-> macOS一般としてのみ）。
+> いる）。このルートはIntel Macでエンドツーエンドの動作を確認済み——
+> ビルド・インストール・実行のすべてを確認した（[動作検証](#動作検証)参照）。
 
 `python/dd_viewer/` も `python/dd_molview_core/` もインストール不要——
 どちらもこのプロジェクト自前のモジュールで、`python/` が実行時に
@@ -514,6 +513,14 @@ Ubuntu/Windowsのビルド・インストール手順は標準的な慣例に従
 実行済み（`bridge_smoke_test` が成功）——ヘッドレスGUIのスクリーンショット
 確認と `cmake --install` の再配置可能性については、そちらでは再実行して
 おらず、macOSでのみ確認済み。
+
+**Intel Mac（`osx-64`）**でのHomebrew Qt6ルート——conda-forgeに`qt6-webengine`
+ビルドが無いプラットフォームでの回避策（[インストール](#インストール)参照）
+——について、実機のIntel Macでエンドツーエンドの動作を確認済み: `brew
+install qt` の後、（`install_all.py`のプラットフォーム別除外により
+`qt6-main`/`qt6-webengine`を外したconda envに対して）そのHomebrew版Qt6を
+使って `cmake -S . -B build && cmake --build build` を実行するとクリーンに
+ビルドでき、インストールも実行も正しく動作する。
 
 ## ライセンス
 

@@ -113,8 +113,8 @@ conda activate dd_molview
 > Workaround for the Qt6 side: use a system Qt6 install instead -- see
 > [macOS (Homebrew Qt6)](#macos-homebrew-qt6) below (`brew install qt`
 > ships `qtwebengine` for both Apple Silicon and Intel bottles); this route
-> has not been build-verified specifically on Intel Mac by this project (see [Verified
-> behavior](#verified-behavior)), only on macOS generally.
+> has been confirmed working end to end on Intel Mac -- build, install, and
+> run all verified (see [Verified behavior](#verified-behavior)).
 
 Neither `python/dd_viewer/` nor `python/dd_molview_core/` needs installing --
 both are this project's own vendored modules, and `python/` is added to
@@ -517,6 +517,14 @@ end on Ubuntu (`bridge_smoke_test` passing) when that env was split off
 from the shared `dd` one -- the full headless-GUI screenshot check and
 `cmake --install` relocatability above were not re-run there, only on
 macOS.
+
+The Homebrew Qt6 route on **Intel Mac (`osx-64`)** specifically -- the
+workaround for conda-forge's missing `qt6-webengine` build on that platform
+(see [Installation](#installation)) -- has since been confirmed end to end
+on real Intel Mac hardware: `brew install qt`, then `cmake -S . -B build &&
+cmake --build build` against that Homebrew Qt6 (with `qt6-main`/
+`qt6-webengine` dropped from the conda env, per `install_all.py`'s
+platform-specific exclusion), builds cleanly, installs, and runs correctly.
 
 ## License
 
