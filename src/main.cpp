@@ -8,6 +8,7 @@
 #include <cstdlib>
 
 #include "MainWindow.h"
+#include "Version.h"
 
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
@@ -18,7 +19,7 @@ int main(int argc, char** argv) {
     // one.
     QApplication::setOrganizationName("dd_molview");
     QApplication::setApplicationName("dd_molview");
-    QApplication::setApplicationVersion("0.2.0");
+    QApplication::setApplicationVersion(DD_MOLVIEW_VERSION);
     app.setWindowIcon(QIcon(":/icon.png"));
 
     QCommandLineParser parser;

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(dd_molview LANGUAGES CXX)
+project(dd_molview VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -106,6 +106,16 @@ find_package(pybind11 REQUIRED)
 # --- Sources -----------------------------------------------------------
 qt_standard_project_setup()
 
+# dd_molview's version lives in exactly one place -- this project()'s
+# VERSION above -- and is handed to the C++ source as a generated header
+# rather than a hardcoded string literal, so main.cpp never needs editing
+# just to bump it.
+configure_file(
+  src/Version.h.in
+  "${CMAKE_BINARY_DIR}/generated/Version.h"
+  @ONLY
+)
+
 add_executable(dd_molview
   src/main.cpp
   src/PythonBridge.cpp
@@ -117,7 +127,7 @@ add_executable(dd_molview
   resources/resources.qrc
 )
 
-target_include_directories(dd_molview PRIVATE src)
+target_include_directories(dd_molview PRIVATE src "${CMAKE_BINARY_DIR}/generated")
 
 target_link_libraries(dd_molview PRIVATE
   Qt6::Core
