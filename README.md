@@ -2,6 +2,17 @@
 
 # dd_molview — A native C++/Qt6 protein-ligand workbench, powered by an embedded Python core
 
+![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)
+![Qt6](https://img.shields.io/badge/Qt-6-41CD52?logo=qt&logoColor=white)
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+<p align="center">
+  <img src="resources/screenshots/overview.png" width="800" alt="dd_molview main window showing the protein table, ligand table, 3D structure view with interaction overlays, and sequence panel">
+</p>
+<p align="center"><sub>The four-panel workbench in action: 3D view and sequence panel on the left, protein and ligand tables on the right, display settings docked at bottom center.</sub></p>
+
 A native C++/Qt6 reimplementation of the retired `dd_molview-desktop`
 (PySide6) app's GUI shell -- the same four-panel workbench (protein table /
 ligand table / 3D view / sequence view) for interactive protein-ligand
@@ -322,37 +333,58 @@ JSON list of `{member_id, receptor_pdb, ...}` objects, duck-typed, no
 
 Every panel behaves identically to the retired `dd_molview-desktop`'s own
 (same underlying `dd_viewer`/`dd_molview_core` calls, just through native `QTableView`/
-`QWebEngineView`/`QTextBrowser` widgets instead of PySide6's):
+`QWebEngineView`/`QTextBrowser` widgets instead of PySide6's).
 
-- **Protein-selection panel**: one row per loaded receptor (label,
-  chain/residue counts, source path); selecting a row makes it the active
-  receptor for the 3D view and sequence panel.
-- **Ligand-selection panel**: one row per loaded ligand, with per-row
-  score/RMSD/interaction-count columns computed against the *active*
-  receptor only.
-- **3D structure view**: cartoon/stick/surface toggles, secondary-structure
-  coloring, an only-near-ligand display option, interaction overlays
-  (H-bonds, hydrophobic contacts, salt bridges, electrostatics,
-  pi-stacking, halogen bonds), floating residue-label text, and
-  camera-position persistence across updates -- `Viewer3D` re-applies the
-  last captured camera view to each freshly reloaded scene via a
-  `page()->runJavaScript()` round-trip, the same technique
-  `dd_molview-desktop` uses. **Highlight interacting residues** (yellow, on
-  by default) marks every residue behind at least one currently-enabled
-  interaction type above -- not merely every residue within the Contact
-  residue cutoff below; that broader, purely distance-based set is a
-  separate, independent concept (see the Contact-residue table below).
-- **Sequence panel**: fixed 50-residues-per-line resnum grid with a
-  line-start ruler, yellow/magenta two-tier highlighting matching the 3D
-  view (the same interaction-based yellow set described above), clickable
-  residues (multi-select with Ctrl/Cmd-click) and clickable "Chain X"
-  headers (re-fits the camera to that chain).
-- **Contact-residue table** (collapsed by default): every residue within
-  the Contact residue cutoff slider's distance of the ligand, independent
-  of the yellow highlight above -- selecting rows highlights those
-  specific residues magenta in both the 3D view and the sequence panel
-  (the usual manual-pick mechanism), regardless of whether they also
-  happen to have a detected interaction.
+### 🧬 Protein-selection panel
+
+One row per loaded receptor (label, chain/residue counts, source path);
+selecting a row makes it the active receptor for the 3D view and sequence
+panel.
+
+### 💊 Ligand-selection panel
+
+One row per loaded ligand, with per-row score/RMSD/interaction-count
+columns computed against the *active* receptor only.
+
+### 🖼️ 3D structure view
+
+Cartoon/stick/surface toggles, secondary-structure coloring, an
+only-near-ligand display option, interaction overlays (H-bonds,
+hydrophobic contacts, salt bridges, electrostatics, pi-stacking, halogen
+bonds), floating residue-label text, and camera-position persistence
+across updates -- `Viewer3D` re-applies the last captured camera view to
+each freshly reloaded scene via a `page()->runJavaScript()` round-trip,
+the same technique `dd_molview-desktop` uses.
+
+<p align="center">
+  <img src="resources/screenshots/binding_site.png" width="650" alt="Close-up of the 3D view: ligand sticks with dashed hydrogen-bond, salt-bridge, and halogen-bond overlays against a cartoon receptor">
+</p>
+<p align="center"><sub>Interaction overlays around a docked ligand -- dashed lines mark detected hydrogen bonds and halogen bonds.</sub></p>
+
+**Highlight interacting residues** (yellow, on by default) marks every
+residue behind at least one currently-enabled interaction type above --
+not merely every residue within the Contact residue cutoff below; that
+broader, purely distance-based set is a separate, independent concept
+(see the Contact-residue table below).
+
+### 🧵 Sequence panel
+
+Fixed 50-residues-per-line resnum grid with a line-start ruler,
+yellow/magenta two-tier highlighting matching the 3D view (the same
+interaction-based yellow set described above), clickable residues
+(multi-select with Ctrl/Cmd-click) and clickable "Chain X" headers
+(re-fits the camera to that chain).
+
+### 📋 Contact-residue table (collapsed by default)
+
+Every residue within the Contact residue cutoff slider's distance of the
+ligand, independent of the yellow highlight above -- selecting rows
+highlights those specific residues magenta in both the 3D view and the
+sequence panel (the usual manual-pick mechanism), regardless of whether
+they also happen to have a detected interaction.
+
+### 🗂️ Docking, screenshots, and quitting
+
 - **Every panel is its own dock** -- movable, floatable, closable
   independently, restored across sessions via `QSettings`
   (`saveGeometry`/`saveState`).
