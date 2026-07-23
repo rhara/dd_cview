@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
     // one.
     QApplication::setOrganizationName("dd_molview");
     QApplication::setApplicationName("dd_molview");
-    QApplication::setApplicationVersion("0.1.0");
+    QApplication::setApplicationVersion("0.2.0");
     app.setWindowIcon(QIcon(":/icon.png"));
 
     QCommandLineParser parser;

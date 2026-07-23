@@ -35,7 +35,7 @@ std::vector<ResiduePair> toStdVector(const QVector<ResiduePair>& v) {
 }  // namespace
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    setWindowTitle("dd_molview");
+    setWindowTitle(QString("dd_molview v%1").arg(QApplication::applicationVersion()));
 
     bridge_ = std::make_unique<PythonBridge>();
 
